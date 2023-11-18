@@ -1,6 +1,7 @@
 # %%
 
 import numpy as np
+from numba import njit
 from numba import jit
 from scipy.special import jv, spherical_jn
 import matplotlib.pyplot as plt

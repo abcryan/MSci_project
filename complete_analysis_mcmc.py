@@ -39,7 +39,18 @@ z_true = true_z_of_r(radii_true)
 
 # %%
 
-z_true, all_grids = generateTrueField(radii_true, omega_matter_true, r_max_true, l_max, k_max)
+#ADDED BY RYAN -_
+def P(k):
+    if k < k_max:
+        return 1
+    else:
+        return 0
+
+z_true, all_grids = generateTrueField(radii_true, omega_matter_true, r_max_true, l_max, k_max, P)
+
+#z_true, all_grids = generateTrueField(radii_true, omega_matter_true, r_max_true, l_max, k_max)
+
+#ADDED BY RYAN _-
 
 # %%
 
@@ -69,16 +80,16 @@ r_max_0 = radii_fiducial[-1]
 
 # Use numba to speed up the calculation
 
-f_lmn_0 = calc_f_lmn_0_numba(radii_fiducial, all_observed_grids, l_max, k_max, n_max)
+# f_lmn_0 = calc_f_lmn_0_numba(radii_fiducial, all_observed_grids, l_max, k_max, n_max)
 
 
-# Save coefficients to a file for future use
-P_amp = 1
-saveFileName = "data/f_lmn_0_true-%.3f_fiducial-%.3f_l_max-%d_k_max-%.2f_r_max_true-%.3f_R-%.3f_P-amp_%.2f-2023-04-18-numba-5.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_true, R, P_amp)
-np.save(saveFileName, f_lmn_0)
-print("Done! File saved to", saveFileName)
+# # Save coefficients to a file for future use
+# P_amp = 1
+# saveFileName = "data/f_lmn_0_true-%.3f_fiducial-%.3f_l_max-%d_k_max-%.2f_r_max_true-%.3f_R-%.3f_P-amp_%.2f-2023-04-18-numba-5.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_true, R, P_amp)
+# np.save(saveFileName, f_lmn_0)
+# print("Done! File saved to", saveFileName)
 
-# %%
+# # %%
 
 # Or, load f_lmn_0 from a file
 omega_matter_true = 0.315
@@ -175,7 +186,10 @@ def log_likelihood(theta):
     nbar = 1e9
     return computeLikelihoodMCMC(f_lmn_0, n_max_ls, r_max_0, omega_matter, P_amp, omega_matters_interp, Ws_interp, SN, nbar)
 
-def log_probability(theta):
+def log_probability(theta): 
+    """
+    function which takes a vector(sample) in parameter space as input and outputs log-posterior probabiliry
+    """
     lp = log_prior(theta)
     if not np.isfinite(lp):
         return -np.inf
@@ -184,7 +198,7 @@ def log_probability(theta):
 
 with Pool() as pool:
     pos = np.array([0.315, 1.0]) + 1e-4 * np.random.randn(32, 2)
-    nwalkers, ndim = pos.shape
+    nwalkers, ndim = pos.shape      #nwalkers = number of walkers, ndim = number of dimensions in parameter space
 
     sampler = emcee.EnsembleSampler(
         nwalkers, ndim, log_probability, pool=pool
