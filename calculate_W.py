@@ -2,8 +2,7 @@
 import numpy as np
 from numba import jit
 import matplotlib.pyplot as plt
-#from scipy.special import spherical_jn, jv
-import scipy as sp
+from scipy.special import spherical_jn, jv
 from scipy.integrate import quad
 from scipy.interpolate import interp1d
 
@@ -51,7 +50,7 @@ def calculate_W(n, n_prime, l, r_max, r0OfR, rOfR0, phiOfR0, simpson=False, simp
     def W_integrand(r):
         r0 = r0OfR(r)
 
-        return phiOfR0(r0) * sp.special.spherical_jn(l, k_ln_prime*r) * sp.special.spherical_jn(l, k_ln*r0) * r*r
+        return phiOfR0(r0) * spherical_jn(l, k_ln_prime*r) * spherical_jn(l, k_ln*r0) * r*r
 
     r_boundary = k_ln_prime * r_max
     r0_boundary = k_ln * r0OfR(r_max)
@@ -142,12 +141,12 @@ def interpolate_W_values(l_max, n_max_ls, omega_matters, Ws, step=0.00001, plot=
 # Numba version
 # Uses np.interp for interpolation instead of scipy.interpolate.interp1d
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def spherical_jn_numba(l, x):
     if x == 0:
         return 1 if l == 0 else 0
 
-    return sp.special.jv(l + 1/2, x) * np.sqrt(np.pi / (2*x))
+    return jv(l + 1/2, x) * np.sqrt(np.pi / (2*x))
 
 
 
@@ -176,7 +175,7 @@ def calc_all_W_numba(l_max, k_max, r_max, r0_vals, r_vals, W_integrand_numba):
 
 def make_W_integrand_numba(phiOfR0):
 
-    @jit(nopython=True)
+    #@jit(nopython=True)
     def W_integrand_numba(r, l, k_ln, k_ln_prime, r0_vals, r_vals):
         r0 = np.interp(r, r_vals, r0_vals)
 
