@@ -2,7 +2,8 @@
 import numpy as np
 from numba import jit
 import matplotlib.pyplot as plt
-from scipy.special import spherical_jn, jv
+#from scipy.special import spherical_jn, jv
+import scipy as sp
 from scipy.integrate import quad
 from scipy.interpolate import interp1d
 
@@ -50,7 +51,7 @@ def calculate_W(n, n_prime, l, r_max, r0OfR, rOfR0, phiOfR0, simpson=False, simp
     def W_integrand(r):
         r0 = r0OfR(r)
 
-        return phiOfR0(r0) * spherical_jn(l, k_ln_prime*r) * spherical_jn(l, k_ln*r0) * r*r
+        return phiOfR0(r0) * sp.special.spherical_jn(l, k_ln_prime*r) * sp.special.spherical_jn(l, k_ln*r0) * r*r
 
     r_boundary = k_ln_prime * r_max
     r0_boundary = k_ln * r0OfR(r_max)
@@ -146,7 +147,7 @@ def spherical_jn_numba(l, x):
     if x == 0:
         return 1 if l == 0 else 0
 
-    return jv(l + 1/2, x) * np.sqrt(np.pi / (2*x))
+    return sp.special.jv(l + 1/2, x) * np.sqrt(np.pi / (2*x))
 
 
 
