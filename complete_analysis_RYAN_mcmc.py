@@ -25,6 +25,7 @@ def P_Top_Hat(k, k_max=200):
     else:
         return 0
 
+# %%
 
 #def main()
 
@@ -150,6 +151,8 @@ omega_matters_interp, Ws_interp = interpolate_W_values(l_max, n_max_ls, omega_ma
 omega_matter_min, omega_matter_max = omega_matters_interp[0], omega_matters_interp[-1]
 
 
+
+
 # Use MCMC to perform likelihood analysis
 
 # Define the probability function as likelihood * prior.
@@ -176,15 +179,20 @@ def log_probability(theta):
 pos = np.array([0.315, 1.0]) + 1e-4 * np.random.randn(32, 2)
 nwalkers, ndim = pos.shape      #nwalkers = number of walkers, ndim = number of dimensions in parameter space
 
+steps = 50
+
+# %%
 # calculate Monte Carlo Markov Chain
 pos = np.array([0.315, 1.0]) + 1e-4 * np.random.randn(32, 2)
 nwalkers, ndim = pos.shape      #nwalkers = number of walkers, ndim = number of dimensions in parameter space
 sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability
 )
-sampler.run_mcmc(pos, 50, progress=True);
+sampler.run_mcmc(pos, steps, progress=True);
 
+print("length of mcmc chain: ", steps)
 
+# %%
 fig, axes = plt.subplots(2, figsize=(10, 7), sharex=True)
 samples = sampler.get_chain()
 labels = ["$\Omega_m$", "$P_{amp}$"]
@@ -194,13 +202,15 @@ for i in range(ndim):
     ax.set_xlim(0, len(samples))
     ax.set_ylabel(labels[i])
     ax.yaxis.set_label_coords(-0.1, 0.5)
-
 axes[-1].set_xlabel("step number");
 plt.show()
 
+# get autocorrelation time
 tau = sampler.get_autocorr_time()
 print(tau)
 
+# %%
+# corner plot
 
 # flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 flat_samples = sampler.get_chain(discard=100, flat=True)
@@ -213,3 +223,4 @@ fig = corner.corner(
 
 # if __name__ == "__main__":
 #     main_function()
+# %%
