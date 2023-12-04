@@ -179,7 +179,7 @@ def log_probability(theta):
 pos = np.array([0.315, 1.0]) + 1e-4 * np.random.randn(32, 2)
 nwalkers, ndim = pos.shape      #nwalkers = number of walkers, ndim = number of dimensions in parameter space
 
-steps = 50
+steps = 500
 
 # %%
 # calculate Monte Carlo Markov Chain

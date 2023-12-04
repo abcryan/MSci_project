@@ -416,8 +416,14 @@ def computeLikelihoodParametrised(f_lmn, n_max_ls, r_max, omega_matter, k_bin_ed
 
 
         # Compute the determinant of Σ_l
-        det_sigma_l = np.linalg.det(sigma_l)
-        det_sigma_l_half = np.linalg.det(sigma_l/2)
+        log_det_sigma_l = np.linalg.slogdet(sigma_l)
+        log_det_sigma_l_half = np.linalg.slogdet(sigma_l/2)
+
+        if log_det_sigma_l[0] == -1 or log_det_sigma_l_half[0] == -1:
+            raise Exception("A determinant is negative")
+        else:
+            log_det_sigma_l = log_det_sigma_l[1]
+            log_det_sigma_l_half = log_det_sigma_l_half[1]
 
 
         for m in range(l + 1):
@@ -465,10 +471,9 @@ def computeLikelihoodParametrised(f_lmn, n_max_ls, r_max, omega_matter, k_bin_ed
 
                 # Add contribution from determinant
                 if m == 0:
-                    total += np.log(det_sigma_l)
+                    total += log_det_sigma_l
                 else:
-                    total += np.log(det_sigma_l_half)
-
+                    total += log_det_sigma_l_half
 
     lnL = -1/2 * (np.log(2*np.pi) + total)
 
