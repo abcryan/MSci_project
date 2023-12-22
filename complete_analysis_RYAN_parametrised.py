@@ -20,6 +20,7 @@ import emcee
 import corner
 import arviz as az
 
+
 # Simple power spectrum
 def P_Top_Hat(k, k_max=200):
     if k < k_max:
@@ -29,13 +30,11 @@ def P_Top_Hat(k, k_max=200):
 
 # %%
 
-#def main()
-
 #########################
 ### SET UP PARAMETERS ###
 
 l_max = 15
-k_max = 200 #200
+k_max = 200 
 r_max_true = 0.75
 n_max = calc_n_max_l(0, k_max, r_max_true) # There are the most modes when l=0
 n_max_ls = np.array([calc_n_max_l(l, k_max, r_max_true) for l in range(l_max + 1)])
@@ -51,19 +50,25 @@ P_amp = 1
 
 # More sophisticated power specturm
 
-#k_bin_edges, k_bin_heights = create_power_spectrum(k_max, 10, np.array([0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]))
-k_bin_edges, k_bin_heights = create_power_spectrum(k_max, 2, np.array([0.35, 0.8]))
+k_bin_edges, k_bin_heights = create_power_spectrum(k_max, 10, np.array([0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]))
+# k_bin_edges, k_bin_heights = create_power_spectrum(k_max, 2, np.array([0.35, 0.8]))
 k_vals = np.linspace(0, 400, 1000)
 P_vals = [P_parametrised(k, k_bin_edges, k_bin_heights) for k in k_vals]
 
-plt.plot(k_vals, P_vals)
+# #1071E5
+plt.plot(k_vals, P_vals, c="k", lw=1.25)
+plt.xlim(0)
+plt.ylim(0)
+plt.xlabel("$k$")
+plt.title("$P(k)$")
+plt.tight_layout()
+# plt.savefig("thesis/plots/power_spectrum_10_bins.svg")
 plt.show()
     
 def P_para(k, k_max=200):
     return P_parametrised(k, k_bin_edges, k_bin_heights)
 
 # %%
-
 # Calculate c_ln coefficients of true SBT with infinite r
 c_ln_values_without_r_max = get_c_ln_values_without_r_max("c_ln.csv")
 
@@ -72,28 +77,18 @@ sphericalBesselZeros = loadSphericalBesselZeros("zeros.csv")
 
 # Generate true field
 radii_true = np.linspace(0, r_max_true, 1001)  
+z_true, all_grids = generateTrueField(radii_true, omega_matter_true, r_max_true, l_max, k_max, P_para)
 
-z_true_file_name = "data_Ryan/data_true_field/z_true-%.3f_l_max-%d_k_max-%.2f_r_max_true-%.3f_P-amp_%.2f.npy" % (omega_matter_true, l_max, k_max, r_max_true, P_amp)
-all_grids_file_name = "data_Ryan/data_true_field/all_grids-%.3f_l_max-%d_k_max-%.2f_r_max_true-%.3f_P-amp_%.2f.npy" % (omega_matter_true, l_max, k_max, r_max_true, P_amp)
-if (path.exists(z_true_file_name) and path.exists(all_grids_file_name)):
-    z_true = np.load(z_true_file_name)
-    all_grids = np.load(all_grids_file_name, allow_pickle=True)
-else:
-    print('generating true field ...')
-    z_true, all_grids = generateTrueField(radii_true, omega_matter_true, r_max_true, l_max, k_max, P_para)
-    # Save coefficients to a file for future use
-    np.save(z_true_file_name, z_true)
-    np.save(all_grids_file_name, all_grids)
-    print("Done! File saved to ", z_true_file_name, " and ", all_grids_file_name)
-
+#%%
 # Add the effect of the selection function
 @jit(nopython=True)
 def phiOfR0(r0):
     return np.exp(-r0*r0 / (2*R*R))
 
+
 radii_true, all_observed_grids = multiplyFieldBySelectionFunction(radii_true, all_grids, phiOfR0)
 
-
+#%%
 #########################
 ### Observed Quantities ###
 
@@ -103,9 +98,11 @@ r_max_0 = radii_fiducial[-1]
 
 # Perform the spherical Bessel transform to obtain the coefficients
 
+### IMPORTANT NEED TO RECOMPUTE EVERYTIME YOU UPDATE THE POWER SPECTRUM ###
+
 #f_lmn_0_saveFileName = "data_Ryan/data_F_lmn_0/f_lmn_0_true-%.3f_fiducial-%.3f_l_max-%d_k_max-%.2f_r_max_true-%.3f_R-%.3f_P-amp_%.2f.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_true, R, P_amp)
 #f_lmn_0_saveFileName = "data/f_lmn_0_true-%.3f_fiducial-%.3f_l_max-%d_k_max-%.2f_r_max_true-%.3f_R-%.3f_P-amp_%.2f.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_true, R, P_amp)
-f_lmn_0_saveFileName = "data/f_lmn_0_true-0.315_fiducial-0.315_l_max-15_k_max-200.00_r_max_true-0.750_R-0.250_P-amp_1.00-2023-04-18-numba-5.npy"
+f_lmn_0_saveFileName = "data/f_lmn_0_true-%.3f_fiducial-%.3f_l_max-%d_k_max-%.2f_r_max_true-%.3f_R-%.3f_P-parametrised-2023-11-27-10-bins.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_true, R)
 if path.exists(f_lmn_0_saveFileName):
     f_lmn_0 = np.load(f_lmn_0_saveFileName)
 else:
@@ -116,10 +113,10 @@ else:
     np.save(f_lmn_0_saveFileName, f_lmn_0)
     print("Done! File saved to", f_lmn_0_saveFileName)
 
-
 #########################
 #########################
 
+#%%
 #########################
 ### Likelihood Calculation ###
 
@@ -130,6 +127,7 @@ P_amps = np.linspace(0.15, 1.05, 51)
 #P_amps = np.linspace(0.95, 1.05, 51)
 likelihoods = np.zeros((np.size(omega_matters_inference), np.size(P_amps)))
 
+#%%
 # Compute W's
 Ws = []
 for omega_matter in omega_matters:
@@ -152,7 +150,7 @@ for omega_matter in omega_matters:
 
 # Compute shot noise
 #SN_saveFileName = "data_Ryan/data_SN/SN_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-%.5f_l_max-%d_k_max-%.2f_r_max_0-%.4f_R-%.3f.npy" % (omega_matter, omega_matter_0, l_max, k_max, r_max_0, R)
-SN_saveFileName = "data/SN_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-%.5f_l_max-%d_k_max-%.2f_r_max_0-%.4f_R-%.3f.npy" % (omega_matter, omega_matter_0, l_max, k_max, r_max_0, R)
+SN_saveFileName = "data/SN_no_tayl_exp_zeros_omega_m_0-%.5f_l_max-%d_k_max-%.2f_r_max_0-%.4f_R-%.3f.npy" % (omega_matter_0, l_max, k_max, r_max_0, R)
 if path.exists(SN_saveFileName):
     SN = np.load(SN_saveFileName)
 else:
@@ -160,6 +158,9 @@ else:
     SN = calc_all_SN(l_max, k_max, r_max_0, phiOfR0)
     np.save(SN_saveFileName, SN)
     
+#%%
+
+# Use MCMC to perform likelihood analysis
 
 #MCMC requires us to be able to evaluate the likelihood for arbitrary values of Ωₘ, so interpolate W^l_nn' (Ωₘ)    
 step = 0.00001
@@ -167,9 +168,6 @@ omega_matters_interp, Ws_interp = interpolate_W_values(l_max, n_max_ls, omega_ma
 omega_matter_min, omega_matter_max = omega_matters_interp[0], omega_matters_interp[-1]
 
 
-
-
-# Use MCMC to perform likelihood analysis
 
 # Define the probability function as likelihood * prior.
 def log_prior(theta):
@@ -192,14 +190,14 @@ def log_probability(theta):
     return lp + log_likelihood(theta)
 
 
-steps = 500
+steps = 10000
 n_walkers = 32
 
 # %%
 # calculate Monte Carlo Markov Chain
 
-#pos = np.array([0.315, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 11)
-pos = np.array([0.315, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 3)
+pos = np.array([0.315, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 11)
+# pos = np.array([0.315, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 3)
 nwalkers, ndim = pos.shape      #nwalkers = number of walkers, ndim = number of dimensions in parameter space
 print("number of walkers: ", nwalkers)
 
@@ -211,21 +209,21 @@ sampler = emcee.EnsembleSampler(
     nwalkers, ndim, log_probability
 )
 
-# # Burn in
-# pos, prob, state = sampler.run_mcmc(pos, 100) 
-# sampler.reset()
+# Burn in
+pos, prob, state = sampler.run_mcmc(pos, 100) 
+sampler.reset()
 
 # Production run
 sampler.run_mcmc(pos, steps, progress=True);
-print("length of mcmc chain: ", steps)
+print("length of mcmc: ", steps)
 
 
 # %%
-fig, axes = plt.subplots(3, figsize=(10, 7), sharex=True)
-#fig, axes = plt.subplots(11, figsize=(10, 7), sharex=True)
+# fig, axes = plt.subplots(3, figsize=(10, 7), sharex=True)
+fig, axes = plt.subplots(11, figsize=(10, 7), sharex=True)
 samples = sampler.get_chain()
-labels = ["$\Omega_m$", *["$P_%d$" % (i+1) for i in range(2)]]
-# labels = ["$\Omega_m$", *["$P_%d$" % (i+1) for i in range(10)]]
+# labels = ["$\Omega_m$", *["$P_%d$" % (i+1) for i in range(2)]]
+labels = ["$\Omega_m$", *["$P_%d$" % (i+1) for i in range(10)]]
 for i in range(ndim):
     ax = axes[i]
     ax.plot(samples[:, :, i], "k", alpha=0.3)
@@ -247,9 +245,9 @@ flat_samples = sampler.get_chain(discard=100, flat=True)
 print(flat_samples.shape)
 
 fig = corner.corner(
-    flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
     # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
-    # flat_samples, labels=labels, truths=[0.315, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]]
+    # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
+    flat_samples, labels=labels, truths=[0.315, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]]
 );
 
 # %%
@@ -271,13 +269,14 @@ def gelman_rubin(chain):
 chain = sampler.chain
 
 print("Dim\tMean\t\tStd.Dev\t\tR̂")
-print("{0:3d}\t{1: 5.4f}\t\t{2:5.4f}\t\t{3:3.2f}".format(
-            ndim, 
-            chain.reshape(-1, chain.shape[-1]).mean(axis=0)[0],
-            chain.reshape(-1, chain.shape[-1]).std(axis=0)[0],
-            gelman_rubin(chain)[0]))
+for i in range(chain.shape[-1]):
+    print("{0:3d}\t{1: 5.4f}\t\t{2:5.4f}\t\t{3:3.2f}".format(
+            i, 
+            chain.reshape(-1, chain.shape[-1]).mean(axis=0)[i],
+            chain.reshape(-1, chain.shape[-1]).std(axis=0)[i],
+            gelman_rubin(chain)[i]))
 
-if gelman_rubin(chain)[0] < 1.1:
+if np.mean(gelman_rubin(chain)) < 1.1:
     print(" ")
     print("Converged!")
 else:

@@ -205,22 +205,21 @@ def log_probability(theta):
 
 # %%
 
-with Pool() as pool:    
-    pos = np.array([0.315, *k_bin_heights]) + 1e-4 * np.random.randn(32, 11)
-    nwalkers, ndim = pos.shape
+pos = np.array([0.315, *k_bin_heights]) + 1e-4 * np.random.randn(32, 11)
+nwalkers, ndim = pos.shape
 
-    # Set up the backend
-    # Clear it in case the file already exists
-    filename = "data/parametrised_power_spectrum_10_bins.h5"
-    backend = emcee.backends.HDFBackend(filename)
-    backend.reset(nwalkers, ndim)
+# # Set up the backend
+# # Clear it in case the file already exists
+# filename = "data/parametrised_power_spectrum_10_bins.h5"
+# backend = emcee.backends.HDFBackend(filename)
+# backend.reset(nwalkers, ndim)
 
-    # To use MH, use moves=emcee.moves.GaussianMove(0.00005)
+# To use MH, use moves=emcee.moves.GaussianMove(0.00005)
 
-    sampler = emcee.EnsembleSampler(
-        nwalkers, ndim, log_probability, pool=pool, backend=backend
-    )
-    sampler.run_mcmc(pos, 10000, progress=True)
+sampler = emcee.EnsembleSampler(
+    nwalkers, ndim, log_probability
+)
+sampler.run_mcmc(pos, 500, progress=True)
 
 
 # %%
