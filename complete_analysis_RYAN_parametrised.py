@@ -7,6 +7,7 @@ from generate_field import generateTrueField, multiplyFieldBySelectionFunction
 from distance_redshift_relation import *
 from spherical_bessel_transform import calc_f_lmn_0_numba, calc_f_lmn_0
 from calculate_W import calc_all_W_numba, make_W_integrand_numba, interpolate_W_values
+from calculate_V import calc_all_V_numba, make_V_integrand_numba, interpolate_V_values
 from calculate_SN import calc_all_SN
 from compute_likelihood import computeLikelihoodParametrised
 from analyse_likelihood import plotContour, plotPosterior
@@ -157,7 +158,28 @@ else:
     print("Computing SN for Ωₘ⁰ = %.4f." % omega_matter_0)
     SN = calc_all_SN(l_max, k_max, r_max_0, phiOfR0)
     np.save(SN_saveFileName, SN)
+
+#%%
+# Compute V's
+Vs = []
+for omega_matter in omega_matters:
+    #V_saveFileName = "data_Ryan/data_V/V_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-%.5f_l_max-%d_k_max-%.2f_r_max_0-%.4f_R-%.3f.npy" % (omega_matter, omega_matter_0, l_max, k_max, r_max_0, R)
+    V_saveFileName = "data/V_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-%.5f_l_max-%d_k_max-%.2f_r_max_0-%.4f_R-%.3f.npy" % (omega_matter, omega_matter_0, l_max, k_max, r_max_0, R)
+    if path.exists(V_saveFileName):
+        V = np.load(V_saveFileName)
+    else:
+        print("Computing W's for Ωₘ = %.4f." % omega_matter)
+        r0_vals, r_vals = getInterpolatedR0ofRValues(omega_matter_0, omega_matter)
+        V_integrand_numba = make_V_integrand_numba(phiOfR0)     #attention, NOT NUMBA ANYMORE
+        V = calc_all_V_numba(l_max, k_max, r_max_0, r0_vals, r_vals, V_integrand_numba)
+        # r0OfR = getInterpolatedR0ofR(omega_matter_0, omega_matter)
+        # rOfR0 = getInterpolatedR0ofR(omega_matter, omega_matter_0)
+        # V = calc_all_V(l_max, k_max, r_max_0, r0OfR, rOfR0, phiOfR0)
+        np.save(V_saveFileName, V)
     
+    V = np.load(V_saveFileName)
+    Vs.append(V)
+
 #%%
 
 # Use MCMC to perform likelihood analysis

@@ -61,7 +61,7 @@ def interpolate_V_values(l_max, n_max_ls, omega_matters, Vs, step=0.00001, plot=
 # Uses np.interp for interpolation instead of scipy.interpolate.interp1d
 
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def spherical_jn_numba(l, x):
     if x == 0:
         return 1 if l == 0 else 0
@@ -69,7 +69,7 @@ def spherical_jn_numba(l, x):
     return jv(l + 1/2, x) * np.sqrt(np.pi / (2*x))
 
 # calculate the derivative of the spherical bessel function
-@jit(nopython=True)
+#@jit(nopython=True)
 def spherical_prime_jn_numba(l, x):
     if x == 0:
         return 1 if l == 0 else 0
@@ -109,7 +109,7 @@ def calc_all_V_numba(l_max, k_max, r_max, r0_vals, r_vals, V_integrand_numba):
 #this is what is inside the INTEGRAL
 def make_V_integrand_numba(phiOfR0):
 
-    @jit(nopython=True)
+    #@jit(nopython=True)
     def V_integrand_numba(r, l, k_ln, k_ln_prime, r0_vals, r_vals):
         r0 = np.interp(r, r_vals, r0_vals)
 
@@ -151,7 +151,7 @@ def calculate_V_numba(n, n_prime, l, r_max, r0_vals, r_vals, V_integrand_numba):
         integral += integralChunk
 
 
-    return np.power(r_max, -3) * c_ln_values_without_r_max[l][n] * c_ln_values_without_r_max[l][n_prime] * k_ln[l][n] * np.power(k_ln_prime[l][n_prime],-1) * integral
+    return np.power(r_max, -3) * c_ln_values_without_r_max[l][n] * c_ln_values_without_r_max[l][n_prime] * k_ln * np.power(k_ln_prime,-1) * integral
 
 
 # %%
