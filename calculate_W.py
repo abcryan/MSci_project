@@ -150,6 +150,8 @@ def spherical_jn_numba(l, x):
 
 
 
+######
+# THIS IS THE FUNCTION THAT IS CALLED FOR THE ANALYSIS
 def calc_all_W_numba(l_max, k_max, r_max, r0_vals, r_vals, W_integrand_numba):
     # The maximum number of modes is when l=0
     n_max_0 = calc_n_max_l(0, k_max, r_max)
@@ -167,6 +169,7 @@ def calc_all_W_numba(l_max, k_max, r_max, r0_vals, r_vals, W_integrand_numba):
                 W_lnn_prime[l][n1][n2] = calculate_W_numba(n1, n2, l, r_max, r0_vals, r_vals, W_integrand_numba)
 
     return W_lnn_prime
+######
 
 
 # r0_vals and r_vals are used for interpolation
