@@ -7,9 +7,10 @@ from generate_field import generateTrueField, multiplyFieldBySelectionFunction
 from distance_redshift_relation import *
 from spherical_bessel_transform import calc_f_lmn_0_numba, calc_f_lmn_0
 from calculate_W import calc_all_W_numba, make_W_integrand_numba, interpolate_W_values
-from calculate_V import calc_all_V_numba, make_V_integrand_numba, interpolate_V_values
+from calculate_V import calc_all_V_numba, make_V_integrand_numba, interpolate_WandV_values
 from calculate_SN import calc_all_SN
 from compute_likelihood import computeLikelihoodParametrised
+from compute_likelihood_WandV import computeLikelihoodParametrised_WandV
 from analyse_likelihood import plotContour, plotPosterior
 from utils import calc_n_max_l, gaussianPhi
 from precompute_c_ln import get_c_ln_values_without_r_max
@@ -168,7 +169,7 @@ for omega_matter in omega_matters:
     if path.exists(V_saveFileName):
         V = np.load(V_saveFileName)
     else:
-        print("Computing W's for Ωₘ = %.4f." % omega_matter)
+        print("Computing V's for Ωₘ = %.4f." % omega_matter)
         r0_vals, r_vals = getInterpolatedR0ofRValues(omega_matter_0, omega_matter)
         V_integrand_numba = make_V_integrand_numba(phiOfR0)     #attention, NOT NUMBA ANYMORE
         V = calc_all_V_numba(l_max, k_max, r_max_0, r0_vals, r_vals, V_integrand_numba)
@@ -186,24 +187,28 @@ for omega_matter in omega_matters:
 
 #MCMC requires us to be able to evaluate the likelihood for arbitrary values of Ωₘ, so interpolate W^l_nn' (Ωₘ)    
 step = 0.00001
-omega_matters_interp, Ws_interp = interpolate_W_values(l_max, n_max_ls, omega_matters, Ws, step=step)
+# omega_matters_interp, Ws_interp = interpolate_W_values(l_max, n_max_ls, omega_matters, Ws, step=step)
+omega_matters_interp, Ws_interp, Vs_interp = interpolate_WandV_values(l_max, n_max_ls, omega_matters, Ws, Vs, step=step)
 omega_matter_min, omega_matter_max = omega_matters_interp[0], omega_matters_interp[-1]
 
-
+beta_min = 0.3
+beta_max = 0.7
 
 # Define the probability function as likelihood * prior.
 def log_prior(theta):
-    omega_matter, *k_bin_heights = theta
+    omega_matter, beta, *k_bin_heights = theta
     k_bin_heights = np.array(k_bin_heights)
-    if omega_matter_min < omega_matter < omega_matter_max and np.all(0 < k_bin_heights) and np.all(k_bin_heights < 2):
+    if omega_matter_min < omega_matter < omega_matter_max and np.all(0 < k_bin_heights) and np.all(k_bin_heights < 2) and beta_min < beta < beta_max:
         return 0.0
     return -np.inf
 
+#TODOOO change this to the new likelihood and update the compute_likekihood_WandVfile
 def log_likelihood(theta):
-    omega_matter, *k_bin_heights = theta
+    omega_matter, beta, *k_bin_heights = theta
     k_bin_heights = np.array(k_bin_heights)
     nbar = 1e9
-    return computeLikelihoodParametrised(f_lmn_0, n_max_ls, r_max_0, omega_matter, k_bin_edges, k_bin_heights, omega_matters_interp, Ws_interp, SN, nbar)
+    return computeLikelihoodParametrised_WandV(f_lmn_0, n_max_ls, r_max_0, omega_matter, beta, k_bin_edges, k_bin_heights, omega_matters_interp, Ws_interp, Vs_interp, SN, nbar)
+########
 
 def log_probability(theta):
     lp = log_prior(theta)
@@ -218,7 +223,8 @@ n_walkers = 32
 # %%
 # calculate Monte Carlo Markov Chain
 
-pos = np.array([0.315, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 11)
+pos = np.array([0.315, 0.5, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 12)
+# pos = np.array([0.315, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 11)
 # pos = np.array([0.315, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 3)
 nwalkers, ndim = pos.shape      #nwalkers = number of walkers, ndim = number of dimensions in parameter space
 print("number of walkers: ", nwalkers)
@@ -242,10 +248,12 @@ print("length of mcmc: ", steps)
 
 # %%
 # fig, axes = plt.subplots(3, figsize=(10, 7), sharex=True)
-fig, axes = plt.subplots(11, figsize=(10, 7), sharex=True)
+# fig, axes = plt.subplots(11, figsize=(10, 7), sharex=True)
+fig, axes = plt.subplots(12, figsize=(10, 7), sharex=True)
 samples = sampler.get_chain()
 # labels = ["$\Omega_m$", *["$P_%d$" % (i+1) for i in range(2)]]
-labels = ["$\Omega_m$", *["$P_%d$" % (i+1) for i in range(10)]]
+# labels = ["$\Omega_m$", *["$P_%d$" % (i+1) for i in range(10)]]
+labels = ["$\Omega_m$", "$beta$", *["$P_%d$" % (i+1) for i in range(10)]]
 for i in range(ndim):
     ax = axes[i]
     ax.plot(samples[:, :, i], "k", alpha=0.3)
@@ -262,6 +270,9 @@ plt.show()
 # %%
 # corner plot
 
+# beta = omega_0**0.6 / b, where b is the galaxy bias parameter and is estimated to be within the range 1.0 and 1.5
+# best might be to use b = 1.23 which gives beta = 0.4
+
 # flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 flat_samples = sampler.get_chain(discard=100, flat=True)
 print(flat_samples.shape)
@@ -269,7 +280,8 @@ print(flat_samples.shape)
 fig = corner.corner(
     # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
     # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
-    flat_samples, labels=labels, truths=[0.315, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]]
+    # flat_samples, labels=labels, truths=[0.315, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]]
+    flat_samples, labels=labels, truths=[0.315, 0.5, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]]
 );
 
 # %%

@@ -15,7 +15,7 @@ c_ln_values_without_r_max = get_c_ln_values_without_r_max("c_ln.csv")
 sphericalBesselZeros = loadSphericalBesselZeros("zeros.csv")
 
 
-def interpolate_V_values(l_max, n_max_ls, omega_matters, Vs, step=0.00001, plot=False, plotIndex=None):
+def interpolate_WandV_values(l_max, n_max_ls, omega_matters, Ws, Vs, step=0.00001, plot=False, plotIndex=None):
     # The maximum number of modes is when l=0
     n_max_0 = n_max_ls[0]
 
@@ -24,6 +24,7 @@ def interpolate_V_values(l_max, n_max_ls, omega_matters, Vs, step=0.00001, plot=
     
     omega_matters_output = np.linspace(np.min(omega_matters), np.max(omega_matters), N)
 
+    Ws_output = np.zeros((l_max + 1, n_max_0 + 1, n_max_0 + 1, np.size(omega_matters_output)))
     Vs_output = np.zeros((l_max + 1, n_max_0 + 1, n_max_0 + 1, np.size(omega_matters_output)))
 
 
@@ -36,12 +37,14 @@ def interpolate_V_values(l_max, n_max_ls, omega_matters, Vs, step=0.00001, plot=
                 # Interpolate V^l_nn (Ωₘ)
 
                 omega_matters = omega_matters
+                W_of_omega_matters = [Ws[i][l][n1][n2] for i in range(len(omega_matters))]
                 V_of_omega_matters = [Vs[i][l][n1][n2] for i in range(len(omega_matters))]
 
 
+                Ws_output[l][n1][n2] = interp1d(omega_matters, W_of_omega_matters, kind="quadratic")(omega_matters_output)
                 Vs_output[l][n1][n2] = interp1d(omega_matters, V_of_omega_matters, kind="quadratic")(omega_matters_output)
 
-
+                # only plotting one of them
                 if plot:
                     l_plot, n1_plot, n2_plot = plotIndex
 
@@ -52,7 +55,7 @@ def interpolate_V_values(l_max, n_max_ls, omega_matters, Vs, step=0.00001, plot=
                         plt.title(f"l={l}, n1={n1}, n2={n2}")
                         plt.show()
 
-    return (omega_matters_output, Vs_output)
+    return (omega_matters_output, Ws_output, Vs_output)
 
 
 

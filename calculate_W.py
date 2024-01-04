@@ -177,6 +177,8 @@ def calc_all_W_numba(l_max, k_max, r_max, r0_vals, r_vals, W_integrand_numba):
 # Use a function factory for the selection function
 # (https://stackoverflow.com/questions/59573365/using-a-function-object-as-an-argument-for-numba-njit-function)
 
+
+#this is what is inside the INTEGRAL
 def make_W_integrand_numba(phiOfR0):
 
     @jit(nopython=True)
