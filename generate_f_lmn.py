@@ -39,6 +39,7 @@ def P_top_hat(k, k_max=300):
         return 0
 
 
+# updated with the RSD distrotions!
 def generate_f_lmn(l_max, r_max, k_max, P):
     n_max = calc_n_max_l(0, k_max, r_max)
     f_lmn_values = np.zeros((l_max + 1, l_max + 1, n_max + 1), dtype=complex)
@@ -52,8 +53,10 @@ def generate_f_lmn(l_max, r_max, k_max, P):
 
                 if m == 0:
                     f_lmn_values[l][m][n] = np.random.normal(0, np.sqrt(P(k_ln)))
+                    # f_lmn_values[l][m][n] = np.random.normal(0, np.sqrt(P(k_ln)*b**2))
                 else:
                     f_lmn_values[l][m][n] = np.random.normal(0, np.sqrt(P(k_ln)/2)) + np.random.normal(0, np.sqrt(P(k_ln)/2)) * 1j
+                    # f_lmn_values[l][m][n] = np.random.normal(0, np.sqrt((P(k_ln)*b**2)/2)) + np.random.normal(0, np.sqrt((P(k_ln)*b**2)/2)) * 1j
 
 
     return f_lmn_values

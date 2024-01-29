@@ -78,7 +78,7 @@ sphericalBesselZeros = loadSphericalBesselZeros("zeros.csv")
 
 # Generate true field
 radii_true = np.linspace(0, r_max_true, 1001)  
-z_true, all_grids = generateTrueField(radii_true, omega_matter_true, r_max_true, l_max, k_max, P_para)
+z_true, all_grids, f_lmn_true = generateTrueField(radii_true, omega_matter_true, r_max_true, l_max, k_max, P_para)
 
 #%%
 # Add the effect of the selection function
@@ -96,25 +96,6 @@ radii_true, all_observed_grids = multiplyFieldBySelectionFunction(radii_true, al
 r_of_z_fiducial = getInterpolatedRofZ(omega_matter_0)
 radii_fiducial = r_of_z_fiducial(z_true)
 r_max_0 = radii_fiducial[-1]
-
-# Perform the spherical Bessel transform to obtain the coefficients
-
-### IMPORTANT NEED TO RECOMPUTE EVERYTIME YOU UPDATE THE POWER SPECTRUM ###
-
-#f_lmn_0_saveFileName = "data_Ryan/data_F_lmn_0/f_lmn_0_true-%.3f_fiducial-%.3f_l_max-%d_k_max-%.2f_r_max_true-%.3f_R-%.3f_P-amp_%.2f.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_true, R, P_amp)
-#f_lmn_0_saveFileName = "data/f_lmn_0_true-%.3f_fiducial-%.3f_l_max-%d_k_max-%.2f_r_max_true-%.3f_R-%.3f_P-amp_%.2f.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_true, R, P_amp)
-f_lmn_0_saveFileName = "data/f_lmn_0_true-%.3f_fiducial-%.3f_l_max-%d_k_max-%.2f_r_max_true-%.3f_R-%.3f_P-parametrised-2023-11-27-10-bins.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_true, R)
-if path.exists(f_lmn_0_saveFileName):
-    f_lmn_0 = np.load(f_lmn_0_saveFileName)
-else:
-    print('calculating observed f_lmn coefficients ...')
-    f_lmn_0 = calc_f_lmn_0(radii_fiducial, all_observed_grids, l_max, k_max, n_max)
-    #f_lmn_0 = calc_f_lmn_0_numba(radii_fiducial, all_observed_grids, l_max, k_max, n_max)
-    # Save coefficients to a file for future use
-    np.save(f_lmn_0_saveFileName, f_lmn_0)
-    print("Done! File saved to", f_lmn_0_saveFileName)
-
-#########################
 
 #%%
 
@@ -134,13 +115,9 @@ else:
 W = np.load(W_saveFileName)
 
 
-# TODO
-# Calculate roh_0 integral:
-# roh_lmn_0 = calculate_roh_lmn_0(l_max, k_max, ...)
-
+# NEW
 # # Calculate overall coefficients:
 
-f_lmn_true = generate_f_lmn(l_max, r_max_true, k_max, P_para)
 print(f_lmn_true.shape)
 print(W.shape)
 
@@ -151,20 +128,31 @@ for l in range(l_max + 1):
         for n in range(n_max_ls[l] + 1):
             roh_lmn[l][m][n] = np.sum(W[l][n] * f_lmn_true[l][m])
 
+# %%
 
 # Generate observed field via a different way
 radii_true = np.linspace(0, r_max_true, 1001)  
 radii_observed_METHOD2, all_observed_grids_METHOD2 = generateGeneralField_given_delta_lmn(radii_true, omega_matter_true, r_max_true, l_max, k_max, P_para, roh_lmn)
 
+
 # %%
-print(np.size(all_observed_grids))
-print(np.size(radii_true))
-print(all_observed_grids[0].shape)
-# %%
-observed_grid = all_observed_grids[20]
+observed_grid = all_observed_grids[10]
 observed_grid.plot()
 
-observed_grid_METHOD2 = all_observed_grids_METHOD2[20]
+observed_grid_METHOD2 = all_observed_grids_METHOD2[10]
 observed_grid_METHOD2.plot()
+
+# %%
+a = observed_grid.to_array()
+print(a.shape)
+b = a.flatten()
+print(b.shape)
+
+a2 = observed_grid_METHOD2.to_array()
+b2 = a2.flatten()
+
+plt.figure(figsize=(10, 6))
+plt.plot(b2,b, 'o', markersize=1)
+plt.show()
 
 # %%
