@@ -95,3 +95,41 @@ def multiplyFieldBySelectionFunction(radii_true, all_grids, phiOfR):
 
 
     return (radii_true, all_observed_grids)
+
+
+
+# Implemented by Ryan to generate a field from precomputed coefficients 
+
+def generateGeneralField_given_delta_lmn(radii_true, omega_matter_true, r_max_true, l_max, k_max, P, delta_lmn):
+    """
+    Generates a field f(z, theta, phi).
+    """
+
+
+    true_z_of_r = getInterpolatedZofR(omega_matter_true)
+    z_true = true_z_of_r(radii_true)
+
+
+    # Calculate the spherical harmonic coefficients for each shell
+    all_coeffs = []
+
+    for i in range(len(radii_true)):
+        r_true = radii_true[i]
+
+        cilm = calcSphHarmCoeffs(r_true, l_max, k_max, r_max_true, delta_lmn)
+        coeffs = pysh.SHCoeffs.from_array(cilm)
+
+        all_coeffs.append(coeffs)
+
+
+    # Expand the coefficients & evaluate the field on a grid
+    all_grids = []
+
+    for i in range(len(radii_true)):
+        grid = all_coeffs[i].expand()
+
+        all_grids.append(grid)
+
+
+    # Return the field we've generated
+    return (z_true, all_grids)
