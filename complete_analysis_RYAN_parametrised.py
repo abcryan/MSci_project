@@ -47,6 +47,9 @@ omega_matter_0 = 0.315      # observed
 
 P_amp = 1
 
+# RSD parameter
+
+
 #########################
 #########################
 
@@ -79,7 +82,7 @@ sphericalBesselZeros = loadSphericalBesselZeros("zeros.csv")
 
 # Generate true field
 radii_true = np.linspace(0, r_max_true, 1001)  
-z_true, all_grids = generateTrueField(radii_true, omega_matter_true, r_max_true, l_max, k_max, P_para)
+z_true, all_grids, _ = generateTrueField(radii_true, omega_matter_true, r_max_true, l_max, k_max, P_para)
 
 #%%
 # Add the effect of the selection function
@@ -191,7 +194,7 @@ step = 0.00001
 omega_matters_interp, Ws_interp, Vs_interp = interpolate_WandV_values(l_max, n_max_ls, omega_matters, Ws, Vs, step=step)
 omega_matter_min, omega_matter_max = omega_matters_interp[0], omega_matters_interp[-1]
 
-beta_min = 0.3
+beta_min = 0.0
 beta_max = 0.7
 
 # Define the probability function as likelihood * prior.
@@ -217,7 +220,7 @@ def log_probability(theta):
     return lp + log_likelihood(theta)
 
 
-steps = 10000
+steps = 5000
 n_walkers = 32
 
 # %%

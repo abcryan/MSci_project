@@ -1,9 +1,11 @@
+# %%
 import numpy as np
 from numba import jit
 from os import path
 
-from generate_f_lmn import create_power_spectrum, P_parametrised
+from generate_f_lmn import create_power_spectrum, P_parametrised, generate_f_lmn
 from generate_field import generateTrueField, multiplyFieldBySelectionFunction
+from generate_field import generateGeneralField_given_delta_lmn
 from distance_redshift_relation import *
 from spherical_bessel_transform import calc_f_lmn_0_numba, calc_f_lmn_0
 from calculate_W import calc_all_W_numba, make_W_integrand_numba, interpolate_W_values
@@ -138,8 +140,31 @@ W = np.load(W_saveFileName)
 
 # # Calculate overall coefficients:
 
-# roh_lmn = roh_lmn_0 + 
+f_lmn_true = generate_f_lmn(l_max, r_max_true, k_max, P_para)
+print(f_lmn_true.shape)
+print(W.shape)
 
-# for l in range(l_max + 1):
-#     for m in range(l + 1):
-#         for n in range(n_max_ls[l] + 1):
+roh_lmn = np.zeros(f_lmn_true.shape, dtype=complex)
+
+for l in range(l_max + 1):
+    for m in range(l + 1):
+        for n in range(n_max_ls[l] + 1):
+            roh_lmn[l][m][n] = np.sum(W[l][n] * f_lmn_true[l][m])
+
+
+# Generate observed field via a different way
+radii_true = np.linspace(0, r_max_true, 1001)  
+radii_observed_METHOD2, all_observed_grids_METHOD2 = generateGeneralField_given_delta_lmn(radii_true, omega_matter_true, r_max_true, l_max, k_max, P_para, roh_lmn)
+
+# %%
+print(np.size(all_observed_grids))
+print(np.size(radii_true))
+print(all_observed_grids[0].shape)
+# %%
+observed_grid = all_observed_grids[20]
+observed_grid.plot()
+
+observed_grid_METHOD2 = all_observed_grids_METHOD2[20]
+observed_grid_METHOD2.plot()
+
+# %%

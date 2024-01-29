@@ -78,7 +78,7 @@ def generateTrueField(radii_true, omega_matter_true, r_max_true, l_max, k_max, P
 
 
     # Return the field we've generated
-    return (z_true, all_grids)
+    return (z_true, all_grids, f_lmn_true)
 
 
 def multiplyFieldBySelectionFunction(radii_true, all_grids, phiOfR):
@@ -133,3 +133,4 @@ def generateGeneralField_given_delta_lmn(radii_true, omega_matter_true, r_max_tr
 
     # Return the field we've generated
     return (z_true, all_grids)
+# %%
