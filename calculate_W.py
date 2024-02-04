@@ -141,7 +141,7 @@ def interpolate_W_values(l_max, n_max_ls, omega_matters, Ws, step=0.00001, plot=
 # Numba version
 # Uses np.interp for interpolation instead of scipy.interpolate.interp1d
 
-@jit(nopython=True)
+# @jit(nopython=True)
 def spherical_jn_numba(l, x):
     if x == 0:
         return 1 if l == 0 else 0
