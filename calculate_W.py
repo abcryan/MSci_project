@@ -181,7 +181,7 @@ def calc_all_W_numba(l_max, k_max, r_max, r0_vals, r_vals, W_integrand_numba):
 #this is what is inside the INTEGRAL
 def make_W_integrand_numba(phiOfR0):
 
-    @jit(nopython=True)
+    # @jit(nopython=True)
     def W_integrand_numba(r, l, k_ln, k_ln_prime, r0_vals, r_vals):
         r0 = np.interp(r, r_vals, r0_vals)
 
