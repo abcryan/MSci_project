@@ -36,7 +36,7 @@ def P_Top_Hat(k, k_max=200):
 #########################
 ### SET UP PARAMETERS ###
 
-l_max = 15
+l_max = 70 # 40 # 25 # 15
 k_max = 200 
 r_max_true = 0.75
 n_max = calc_n_max_l(0, k_max, r_max_true) # There are the most modes when l=0
@@ -51,7 +51,7 @@ P_amp = 1
 # RSD parameter
 b_true = 1.0   # galaxy bias parameter, 1.0 <= b <= 1.5 usually in RSD Surveys
 beta_true = omega_matter_true**0.6 / b_true
-
+# beta_true = 0.0
 #########################
 #########################
 
@@ -263,7 +263,7 @@ def log_probability(theta):
     return lp + log_likelihood(theta)
 
 
-steps = 5000
+steps = 10000
 n_walkers = 32
 
 # %%
@@ -317,7 +317,7 @@ fig = corner.corner(
     # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
     # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
     # flat_samples, labels=labels, truths=[0.315, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]]
-    flat_samples, labels=labels, truths=[0.315, 0.5, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]]
+    flat_samples, show_titles=True,labels=labels, truths=[0.315, 0.5, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]]
 );
 
 # %%
@@ -358,4 +358,15 @@ else:
 
 # if __name__ == "__main__":
 #     main_function()
+# %%
+    
+print(flat_samples.shape)
+# from IPython.display import display, Math
+
+# for i in range(ndim):
+#     mcmc = np.percentile(flat_samples[:, i], [16, 50, 84])
+#     q = np.diff(mcmc)
+#     txt = "\mathrm{{{3}}} = {0:.3f}_{{-{1:.3f}}}^{{{2:.3f}}}"
+#     txt = txt.format(mcmc[1], q[0], q[1], labels[i])
+#     display(Math(txt))
 # %%
