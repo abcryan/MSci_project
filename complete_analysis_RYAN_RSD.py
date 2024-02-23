@@ -11,7 +11,7 @@ from calculate_W import calc_all_W_numba, make_W_integrand_numba, interpolate_W_
 from calculate_V import calc_all_V_numba, make_V_integrand_numba, interpolate_WandV_values
 from calculate_SN import calc_all_SN
 from compute_likelihood import computeLikelihoodParametrised
-from compute_likelihood_WandV import computeLikelihoodParametrised_WandV
+from compute_likelihood_WandV import computeLikelihoodParametrised_WandV, computeLikelihood
 from analyse_likelihood import plotContour, plotPosterior
 from utils import calc_n_max_l, gaussianPhi
 from precompute_c_ln import get_c_ln_values_without_r_max
@@ -36,7 +36,7 @@ def P_Top_Hat(k, k_max=200):
 #########################
 ### SET UP PARAMETERS ###
 
-l_max = 70 # 40 # 25 # 15
+l_max = 100 #70 # 40 # 25 # 15
 k_max = 200 
 r_max_true = 0.75
 n_max = calc_n_max_l(0, k_max, r_max_true) # There are the most modes when l=0
@@ -263,33 +263,42 @@ def log_probability(theta):
     return lp + log_likelihood(theta)
 
 
-steps = 10000
-n_walkers = 32
-
 # %%
 # calculate Monte Carlo Markov Chain
 
-pos = np.array([0.315, 0.5, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 12)
-nwalkers, ndim = pos.shape      #nwalkers = number of walkers, ndim = number of dimensions in parameter space
-print("number of walkers: ", nwalkers)
+steps = 4000
+n_walkers = 32
 
-sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability
-)
+# Save the MCMC sample
+MCMC_sample_saveFileName = "MCMC_sample_data/Steps-%.0f_l_max-%d_k_max%.0d_r_max_true_%.2f_beta-%.1f.npy" % (steps, l_max, k_max, r_max_true, beta_true)
+if path.exists(MCMC_sample_saveFileName):
+    sampler = np.load(MCMC_sample_saveFileName)
+else:
 
-# Burn in
-pos, prob, state = sampler.run_mcmc(pos, 100) 
-sampler.reset()
+    pos = np.array([0.315, 0.5, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 12)
+    nwalkers, ndim = pos.shape      #nwalkers = number of walkers, ndim = number of dimensions in parameter space
+    print("number of walkers: ", nwalkers)
 
-# Production run
-sampler.run_mcmc(pos, steps, progress=True);
-print("length of mcmc: ", steps)
+    sampler = emcee.EnsembleSampler(
+        nwalkers, ndim, log_probability
+    )
+
+    # Burn in
+    print("Burn-in:")
+    pos, prob, state = sampler.run_mcmc(pos, 400, progress=True) 
+    sampler.reset()
+
+    # Production run
+    print("Production run:")
+    sampler.run_mcmc(pos, steps, progress=True);
+    print("length of mcmc: ", steps)
+    np.save(MCMC_sample_saveFileName, sampler)
 
 
 # %%
 fig, axes = plt.subplots(12, figsize=(10, 7), sharex=True)
 samples = sampler.get_chain()
-labels = ["$\Omega_m$", "$beta$", *["$P_%d$" % (i+1) for i in range(10)]]
+labels = ["$\Omega_{m}$", "$\\beta$", *["$P_%d$" % (i+1) for i in range(10)]]
 for i in range(ndim):
     ax = axes[i]
     ax.plot(samples[:, :, i], "k", alpha=0.3)
@@ -310,7 +319,7 @@ plt.show()
 # best might be to use b = 1.23 which gives beta = 0.4
 
 # flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
-flat_samples = sampler.get_chain(discard=100, flat=True)
+flat_samples = sampler.get_chain(discard=400, flat=True)
 print(flat_samples.shape)
 
 fig = corner.corner(
@@ -355,18 +364,143 @@ else:
 
 
 
-
-# if __name__ == "__main__":
-#     main_function()
 # %%
-    
 print(flat_samples.shape)
-# from IPython.display import display, Math
+fig = corner.corner(
+    # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
+    # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
+    # flat_samples, labels=labels, truths=[0.315, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]]
+    flat_samples[:,:2], title_fmt='.5f',show_titles=True,labels=labels[:2], truths=[0.315, 0.5],
+    plot_density=True,
+    plot_datapoints=True,
+    fill_contours=False,
+    smooth=True,
+    levels=(0.6827, 0.90, 0.9545),
+    contourf_kwargs= dict(cmap='viridis'),
+    quantiles=[0.16, 0.5, 0.84],
+    title_kwargs={"fontsize": 12},
+            );
 
-# for i in range(ndim):
-#     mcmc = np.percentile(flat_samples[:, i], [16, 50, 84])
-#     q = np.diff(mcmc)
-#     txt = "\mathrm{{{3}}} = {0:.3f}_{{-{1:.3f}}}^{{{2:.3f}}}"
-#     txt = txt.format(mcmc[1], q[0], q[1], labels[i])
-#     display(Math(txt))
+# fig.gca().annotate(
+#     "",
+#     xy=(1.0, 1.0),
+#     xycoords="figure fraction",
+#     xytext=(-20, -10),
+#     textcoords="offset points",
+#     ha="right",
+#     va="top",
+# )
+# axes = np.array(fig.axes).reshape((2, 2))
+# for a in axes[np.triu_indices(2)]:
+#     a.remove()
+
+
+fig.savefig("demo.png", dpi=1000)
+#  %%
+
+# def getDeltaLnL(likelihoods):
+#     # Subtract the maximum
+#     maximum = np.max(likelihoods)
+#     delta_lnL = likelihoods - maximum
+#     return delta_lnL
+
+# # Selecting the parameters for the contour plot
+# # Here we use the first two parameters as an example
+# x_samples = flat_samples[:, 0]
+# y_samples = flat_samples[:, 1]
+
+# # Creating a 2D histogram of samples
+# hist, xedges, yedges = np.histogram2d(x_samples, y_samples, bins=30, density=True)
+
+# hist = getDeltaLnL(hist)
+# # Convert bin edges to centers
+# xcenters = 0.5 * (xedges[1:] + xedges[:-1])
+# ycenters = 0.5 * (yedges[1:] + yedges[:-1])
+
+# # Plotting the contour
+# plt.contourf(xcenters, ycenters, hist, cmap='viridis')
+# plt.colorbar(label='Posterior density')
+# plt.xlabel('Parameter 1')
+# plt.ylabel('Parameter 2')
+# plt.title('Posterior distribution contour plot')
+# plt.show()
+
+
+# %%
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+import scipy.ndimage
+
+from scipy.ndimage.filters import gaussian_filter
+
+def sigma_to_percentile(sigma):
+    """Convert sigma to percentile of the Gaussian distribution."""
+    return norm.cdf(sigma) - norm.cdf(-sigma)
+
+def getDeltaLnL(likelihoods):
+    # Subtract the maximum
+    maximum = np.max(likelihoods)
+    delta_lnL = likelihoods - maximum
+    return delta_lnL
+
+
+def plot_2d_likelihood(samples, x_index, y_index, labels, truths=None, sigmas=[0.5, 1, 2, 3, 4]):
+    """
+    Plots a 2D likelihood contour plot for two parameters.
+    
+    :param samples: Flat MCMC samples
+    :param x_index: Index of the parameter to plot on the x-axis
+    :param y_index: Index of the parameter to plot on the y-axis
+    :param labels: List of parameter names for labeling the axes
+    :param truths: True values of the parameters for plotting
+    :param sigmas: List of sigma levels for the contours
+    """
+    # Define the percentile levels for the contours
+    levels = [sigma_to_percentile(s) for s in sigmas]
+    
+    # Extract the samples for the parameters we are plotting
+    x = samples[:, x_index]
+    y = samples[:, y_index]
+
+    # Estimate the 2D histogram
+    hist, xedges, yedges = np.histogram2d(x, y, bins=10, density=True)
+    
+
+    hist = getDeltaLnL(hist)
+    # Convert histogram to contour levels
+    hist_sorted = np.sort(hist.flatten())[::-1]
+    cum_hist = np.cumsum(hist_sorted)
+    cum_hist /= cum_hist[-1]
+    contour_levels = [hist_sorted[np.argmax(cum_hist > level)] for level in levels]
+    print(contour_levels)
+    
+    # Plot the 2D histogram as contours
+    X, Y = np.meshgrid(xedges[:-1], yedges[:-1])
+    # plt.contour(X.T, Y.T, hist,  cmap = 'viridis', linewidths=1.5)
+    # plt.colorbar()
+
+    X,Y,hist = scipy.ndimage.zoom(X.T,Y.T,hist.T, 3)
+
+    # Basic contour plot
+    fig, ax = plt.subplots()
+    CS = ax.contour(X, Y, hist,  cmap = 'viridis', linewidths=1.5)
+    ax.clabel(CS, CS.levels, inline=True,  fontsize=10)
+    
+    # Plot the truth values if provided
+    if truths is not None:
+        ax.axvline(truths[x_index], color='r', linestyle='--')
+        ax.axhline(truths[y_index], color='r', linestyle='--')
+    
+    
+    # Label the plot
+    ax.xlabel(labels[x_index])
+    ax.ylabel(labels[y_index])
+    ax.title('2D Likelihood Contour Plot')
+    ax.show()
+
+# Example usage:
+labels = ['Ωm', 'β'] # Replace with your parameter names
+plot_2d_likelihood(flat_samples, x_index=0, y_index=1, labels=labels, truths=[0.315, 0.5])
+
 # %%
