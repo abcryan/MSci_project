@@ -266,13 +266,14 @@ def log_probability(theta):
 # %%
 # calculate Monte Carlo Markov Chain
 
-steps = 4000
+steps = 4500
 n_walkers = 32
+burnin = 300
 
 # Save the MCMC sample
 MCMC_sample_saveFileName = "MCMC_sample_data/Steps-%.0f_l_max-%d_k_max%.0d_r_max_true_%.2f_beta-%.1f.npy" % (steps, l_max, k_max, r_max_true, beta_true)
 if path.exists(MCMC_sample_saveFileName):
-    sampler = np.load(MCMC_sample_saveFileName)
+    flat_samples = np.load(MCMC_sample_saveFileName)
 else:
 
     pos = np.array([0.315, 0.5, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 12)
@@ -282,20 +283,22 @@ else:
     sampler = emcee.EnsembleSampler(
         nwalkers, ndim, log_probability
     )
-
     # Burn in
     print("Burn-in:")
-    pos, prob, state = sampler.run_mcmc(pos, 400, progress=True) 
+    pos, prob, state = sampler.run_mcmc(pos, burnin, progress=True) 
     sampler.reset()
 
     # Production run
     print("Production run:")
     sampler.run_mcmc(pos, steps, progress=True);
     print("length of mcmc: ", steps)
-    np.save(MCMC_sample_saveFileName, sampler)
+
+    flat_samples = sampler.get_chain(discard=burnin, flat=True)
+    np.save(MCMC_sample_saveFileName, flat_samples)
 
 
 # %%
+# flat_samples = sampler.get_chain(discard=burnin, flat=True)
 fig, axes = plt.subplots(12, figsize=(10, 7), sharex=True)
 samples = sampler.get_chain()
 labels = ["$\Omega_{m}$", "$\\beta$", *["$P_%d$" % (i+1) for i in range(10)]]
@@ -319,15 +322,31 @@ plt.show()
 # best might be to use b = 1.23 which gives beta = 0.4
 
 # flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
-flat_samples = sampler.get_chain(discard=400, flat=True)
+flat_samples = sampler.get_chain(discard=burnin, flat=True)
 print(flat_samples.shape)
 
 fig = corner.corner(
+
     # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
     # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
     # flat_samples, labels=labels, truths=[0.315, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]]
-    flat_samples, show_titles=True,labels=labels, truths=[0.315, 0.5, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]]
+    flat_samples, 
+    title_fmt='.5f',
+    bins=30,
+    show_titles=True,
+    labels=labels, 
+    truths=[0.315, 0.5, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]],
+    plot_density=True,
+    plot_datapoints=True,
+    fill_contours=False,
+    smooth=True,
+    levels=(0.6827, 0.90, 0.9545),
+    quantiles=[0.16, 0.5, 0.84],
+    title_kwargs={"fontsize": 10},
+    truth_color='cornflowerblue',
+        
 );
+fig.savefig("corner_plot.png", dpi=1000)
 
 # %%
 
@@ -366,20 +385,52 @@ else:
 
 # %%
 print(flat_samples.shape)
+fg = plt.figure(figsize=(6, 6))
 fig = corner.corner(
     # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
     # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
     # flat_samples, labels=labels, truths=[0.315, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]]
-    flat_samples[:,:2], title_fmt='.5f',show_titles=True,labels=labels[:2], truths=[0.315, 0.5],
+    flat_samples[:,:2], 
+    title_fmt='.5f',
+    bins=30,
+    show_titles=True,
+    labels=labels[:2], 
+    truths=[0.315, 0.5],
     plot_density=True,
     plot_datapoints=True,
     fill_contours=False,
     smooth=True,
     levels=(0.6827, 0.90, 0.9545),
-    contourf_kwargs= dict(cmap='viridis'),
     quantiles=[0.16, 0.5, 0.84],
-    title_kwargs={"fontsize": 12},
+    title_kwargs={"fontsize": 10},
+    truth_color='cornflowerblue',
+    fig=fg,
+    titles = ["$\Omega_{m}^{median}$", "$\\beta^{median}$"]
             );
+
+for ax in fig.get_axes():
+    for line in ax.get_lines():
+        line.set_linewidth(1)  # Set to desired thickness
+
+line1 = plt.Line2D([0], [0], color='cornflowerblue', linewidth=0.8, linestyle='-', marker='s')
+line2 = plt.Line2D([0], [0], color='black', linewidth=1, linestyle='--')
+# You can adjust the line colors and styles to match your plot's elements
+
+# Choose an appropriate axis for the legend
+# For a corner plot, the top right axis is usually empty, so we can use it for the legend
+fig.legend([line1, line2], 
+           ['$\Omega_{m}^{True}$ = %.3f \n$\\beta^{True}$ = %.1f' % (omega_matter_true, beta_true), 
+            '1-$\sigma$ interval \naround median'], 
+            loc=(0.63,0.75),
+            prop={'size': 10},
+            # shadow=True,
+            )
+
+ax = fig.axes[2]
+ax.annotate('68%', xy=(0.5, 0.305), xycoords='axes fraction', fontsize=6)
+ax.annotate('90%', xy=(0.49, 0.22), xycoords='axes fraction', fontsize=6)
+ax.annotate('95%', xy=(0.48, 0.17), xycoords='axes fraction', fontsize=6)
+
 
 # fig.gca().annotate(
 #     "",
@@ -393,10 +444,24 @@ fig = corner.corner(
 # axes = np.array(fig.axes).reshape((2, 2))
 # for a in axes[np.triu_indices(2)]:
 #     a.remove()
-
-
 fig.savefig("demo.png", dpi=1000)
+
 #  %%
+if hasattr(sampler, 'get_log_prob'):
+    log_prob = sampler.get_log_prob(flat=True)
+else:
+    # Compute log likelihood for each sample (this could be computationally expensive)
+    log_prob = np.array([log_likelihood(params) for params in samples])
+
+# Find the index of the sample with the maximum log likelihood
+max_log_prob_index = np.argmax(log_prob)
+
+# Extract the parameter values and the maximum log likelihood
+max_likelihood_parameters = flat_samples[max_log_prob_index]
+max_log_likelihood_value = log_prob[max_log_prob_index]
+
+print("Maximum Log Likelihood Parameters:", max_likelihood_parameters)
+print("Maximum Log Likelihood Value:", max_log_likelihood_value)
 
 # def getDeltaLnL(likelihoods):
 #     # Subtract the maximum
