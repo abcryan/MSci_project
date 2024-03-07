@@ -142,7 +142,7 @@ if path.exists(F_saveFileName):
 else:
     print("Computing F's for Ωₘ = %.4f." % omega_matter_true)
     r0_vals, r_vals = getInterpolatedR0ofRValues(omega_matter_0, omega_matter_true) # not needed I think
-    F = calc_all_V_numba(l_max, k_max, r_max_true, r_max_0, r0_vals, r_vals)
+    F = calculate_all_F(l_max, k_max, r_max_0, r0_vals, r_vals, sigma)
     np.save(F_saveFileName, F)
 
 W_true = np.load(W_saveFileName)
@@ -254,9 +254,9 @@ for omega_matter in omega_matters:
     if path.exists(F_saveFileName):
         F = np.load(F_saveFileName)
     else:
-        print("Computing V's for Ωₘ = %.4f." % omega_matter)
+        print("Computing F's for Ωₘ = %.4f." % omega_matter)
         r0_vals, r_vals = getInterpolatedR0ofRValues(omega_matter_0, omega_matter)
-        F = calc_all_V_numba(l_max, k_max, r_max_0, r_max_0, r0_vals, r_vals)
+        F = calculate_all_F(l_max, k_max, r_max_0, r0_vals, r_vals, sigma)
 
         np.save(F_saveFileName, F)
     
@@ -289,7 +289,7 @@ def log_likelihood(theta):
     omega_matter, beta, *k_bin_heights = theta
     k_bin_heights = np.array(k_bin_heights)
     nbar = 1e9
-    return computeLikelihoodParametrised_WandV(f_lmn_0, n_max_ls, r_max_0, omega_matter, beta, k_bin_edges, k_bin_heights, omega_matters_interp, Ws_interp, Vs_interp, SN, nbar)
+    return computeLikelihoodParametrised_WVandF(f_lmn_0, n_max_ls, r_max_0, omega_matter, beta, k_bin_edges, k_bin_heights, omega_matters_interp, Ws_interp, Vs_interp, Fs_interp, SN, nbar)
 ########
 
 def log_probability(theta):

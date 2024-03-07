@@ -1,4 +1,4 @@
-#%%
+# #%%
 import time
 import numpy as np
 from numba import jit
@@ -103,7 +103,9 @@ def calculate_F(n, n_prime, l, r_max, r0_vals, r_vals, sigma):
     k_ln = sphericalBesselZeros[l][n] / r_max
     k_ln_prime = sphericalBesselZeros[l][n_prime] / r_max
 
-    integral1, error1, t1, integral2, error2, t2, integral3, error3, t3 = 0, 0, 0, 0, 0, 0, 0, 0, 0
+    # integral1, error1, t1 = 0, 0, 0
+    integral2, error2, t2 = 0, 0, 0 
+    # integral3, error3, t3 = 0, 0, 0
 
     # # METHOD 1: Simply Integrate over r and y
     # s1 = time.perf_counter()
@@ -143,7 +145,8 @@ def calculate_F(n, n_prime, l, r_max, r0_vals, r_vals, sigma):
 
     integral2 *= np.power(r_max, -3) * np.power(np.pi, -1) * c_ln_values_without_r_max[l][n] * c_ln_values_without_r_max[l][n_prime] * integral2 
 
-    return integral1, error1, t1, integral2, error2, t2, integral3, error3, t3
+    # return integral1, error1, t1, integral2, error2, t2, integral3, error3, t3
+    return integral2
 
 
 
@@ -164,26 +167,26 @@ def calculate_all_F(l_max, k_max, r_max, r0_vals, r_vals, sigma):
     return F_lnn_prime
 
 
-l =0
-n=0
-n_prime = 0
-r_max = 0.755
-sigma = 0.001
+# l =0
+# n=0
+# n_prime = 0
+# r_max = 0.755
+# sigma = 0.001
 
-#%%
+# #%%
 
-integral1, error1,t1, integral2, error2,t2, integral3, error3,t3 = calculate_F(n, n_prime, l, r_max, r0_vals=0, r_vals=0, sigma=sigma)
-print("Method 1: ",integral1, error1)
-print("Method 2: ",integral2, error2)
-print("Method 3: ",integral3, error3)
+# integral1, error1,t1, integral2, error2,t2, integral3, error3,t3 = calculate_F(n, n_prime, l, r_max, r0_vals=0, r_vals=0, sigma=sigma)
+# print("Method 1: ",integral1, error1)
+# print("Method 2: ",integral2, error2)
+# print("Method 3: ",integral3, error3)
 
 
-print("Elapsed time Method 1: ", t1)
-print("Elapsed time Method 2: ", t2)
-print("Elapsed time Method 3: ", t3)
+# print("Elapsed time Method 1: ", t1)
+# print("Elapsed time Method 2: ", t2)
+# print("Elapsed time Method 3: ", t3)
 
-# print(spherical_jn_numba(15, -3), spherical_jn(15, -3))
-# %%
+# # print(spherical_jn_numba(15, -3), spherical_jn(15, -3))
+# # %%
 
 
 # # PLOT THE INTEGRAND
