@@ -151,12 +151,39 @@ F_true = np.load(F_saveFileName)
 
 # Calculate new coefficients of the TRUE field:
 
+# roh_lmn = np.zeros(f_lmn_true.shape, dtype=complex)
+# for l in range(l_max + 1):
+#     for m in range(l + 1):
+#         for n in range(n_max_ls[l] + 1):
+#             roh_lmn[l][m][n] = np.sum((W_true[l][n] + beta_true * V_true[l][n]) * f_lmn_true[l][m])
+
+# dm = np.zeros(f_lmn_true.shape, dtype=complex)
+# for l in range(l_max + 1):
+#     for m in range(l + 1):
+#         for n in range(n_max_ls[l] + 1):
+#             sum = 0
+#             for n_prime in range(n_max_ls[l] + 1):
+#                 sum +=  (W_true[l][n][n_prime] + beta_true * V_true[l][n][n_prime]) * f_lmn_true[l][m][n_prime]
+                
+#             dm[l][m][n] = sum
+
+# print("difference is: ", np.sum(roh_lmn - dm))
+
+
+# With F matrix new:
 roh_lmn = np.zeros(f_lmn_true.shape, dtype=complex)
 for l in range(l_max + 1):
     for m in range(l + 1):
         for n in range(n_max_ls[l] + 1):
-            roh_lmn[l][m][n] = np.sum(F_true[l][n] * (W_true[l][n] + beta_true * V_true[l][n]) * f_lmn_true[l][m])
+            sum_n_prime = 0
+            for n_prime in range(n_max_ls[l] + 1):
+                sum_n_prime_prime = 0
+                for n_prime_prime in range(n_max_ls[l] + 1):
+                    sum_n_prime_prime +=  (W_true[l][n_prime][n_prime_prime] + beta_true * V_true[l][n_prime][n_prime_prime]) * f_lmn_true[l][m][n_prime_prime]
+                sum_n_prime += sum_n_prime_prime * F_true[l][n][n_prime]
+            roh_lmn[l][m][n] = sum_n_prime
 
+# print("difference is: ", np.sum(roh_lmn - dm))
 
 # %%
 # Generate observed field via a different way
@@ -250,18 +277,19 @@ for omega_matter in omega_matters:
 # Compute F's
 Fs = []
 for omega_matter in omega_matters:
-    F_saveFileName = "data/F_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-%.5f_l_max-%d_k_max-%.2f_r_max_0-%.4f_R-%.3f_sigma-%.4f.npy" % (omega_matter, omega_matter_0, l_max, k_max, r_max_0, R, sigma)
-    if path.exists(F_saveFileName):
-        F = np.load(F_saveFileName)
-    else:
-        print("Computing F's for Ωₘ = %.4f." % omega_matter)
-        r0_vals, r_vals = getInterpolatedR0ofRValues(omega_matter_0, omega_matter)
-        F = calculate_all_F(l_max, k_max, r_max_0, r0_vals, r_vals, sigma)
+    # F_saveFileName = "data/F_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-%.5f_l_max-%d_k_max-%.2f_r_max_0-%.4f_R-%.3f_sigma-%.4f.npy" % (omega_matter, omega_matter_0, l_max, k_max, r_max_0, R, sigma)
+    # if path.exists(F_saveFileName):
+    #     F = np.load(F_saveFileName)
+    # else:
+    #     print("Computing F's for Ωₘ = %.4f." % omega_matter)
+    #     r0_vals, r_vals = getInterpolatedR0ofRValues(omega_matter_0, omega_matter)
+    #     F = calculate_all_F(l_max, k_max, r_max_0, r0_vals, r_vals, sigma)
 
-        np.save(F_saveFileName, F)
+    #     np.save(F_saveFileName, F)
     
-    F = np.load(F_saveFileName)
-    Fs.append(V)
+    # F = np.load(F_saveFileName)
+    F = np.load(F_saveFileName) # just copy all the F's from the previous cell
+    Fs.append(F)
 #%%
 
 # Use MCMC to perform likelihood analysis
@@ -276,6 +304,12 @@ omega_matter_min, omega_matter_max = omega_matters_interp[0], omega_matters_inte
 beta_min = 0.0
 beta_max = 0.7
 
+# I don't need interpolated F values!
+# USE the usual F matrix. 
+
+#%%
+
+
 # Define the probability function as likelihood * prior.
 def log_prior(theta):
     omega_matter, beta, *k_bin_heights = theta
@@ -289,7 +323,7 @@ def log_likelihood(theta):
     omega_matter, beta, *k_bin_heights = theta
     k_bin_heights = np.array(k_bin_heights)
     nbar = 1e9
-    return computeLikelihoodParametrised_WVandF(f_lmn_0, n_max_ls, r_max_0, omega_matter, beta, k_bin_edges, k_bin_heights, omega_matters_interp, Ws_interp, Vs_interp, Fs_interp, SN, nbar)
+    return computeLikelihoodParametrised_WVandF(f_lmn_0, n_max_ls, r_max_0, omega_matter, beta, k_bin_edges, k_bin_heights, omega_matters_interp, Ws_interp, Vs_interp, F, SN, nbar)
 ########
 
 def log_probability(theta):
@@ -302,39 +336,30 @@ def log_probability(theta):
 # %%
 # calculate Monte Carlo Markov Chain
 
-steps = 4500
+steps = 4000
 n_walkers = 32
-burnin = 300
+burnin = 200
 
-# Save the MCMC sample
-MCMC_sample_saveFileName = "MCMC_sample_data/Steps-%.0f_l_max-%d_k_max%.0d_r_max_true_%.2f_beta-%.1f.npy" % (steps, l_max, k_max, r_max_true, beta_true)
-if path.exists(MCMC_sample_saveFileName):
-    flat_samples = np.load(MCMC_sample_saveFileName)
-else:
+pos = np.array([0.315, 0.5, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 12)
+nwalkers, ndim = pos.shape      #nwalkers = number of walkers, ndim = number of dimensions in parameter space
+print("number of walkers: ", nwalkers)
 
-    pos = np.array([0.315, 0.5, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 12)
-    nwalkers, ndim = pos.shape      #nwalkers = number of walkers, ndim = number of dimensions in parameter space
-    print("number of walkers: ", nwalkers)
+sampler = emcee.EnsembleSampler(
+    nwalkers, ndim, log_probability
+)
+# Burn in
+print("Burn-in:")
+pos, prob, state = sampler.run_mcmc(pos, burnin, progress=True) 
+sampler.reset()
 
-    sampler = emcee.EnsembleSampler(
-        nwalkers, ndim, log_probability
-    )
-    # Burn in
-    print("Burn-in:")
-    pos, prob, state = sampler.run_mcmc(pos, burnin, progress=True) 
-    sampler.reset()
-
-    # Production run
-    print("Production run:")
-    sampler.run_mcmc(pos, steps, progress=True);
-    print("length of mcmc: ", steps)
-
-    flat_samples = sampler.get_chain(discard=burnin, flat=True)
-    np.save(MCMC_sample_saveFileName, flat_samples)
+# Production run
+print("Production run:")
+sampler.run_mcmc(pos, steps, progress=True);
+print("length of mcmc: ", steps)
 
 
 # %%
-# flat_samples = sampler.get_chain(discard=burnin, flat=True)
+flat_samples = sampler.get_chain(discard=burnin, flat=True)
 fig, axes = plt.subplots(12, figsize=(10, 7), sharex=True)
 samples = sampler.get_chain()
 labels = ["$\Omega_{m}$", "$\\beta$", *["$P_%d$" % (i+1) for i in range(10)]]

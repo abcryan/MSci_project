@@ -332,7 +332,7 @@ def computeLikelihoodMCMC(f_lmn, n_max_ls, r_max, omega_matter, P_amp, omega_mat
 
 # new variables: beta and Vs_interp
 @jit(nopython=True)
-def computeExpectationParametrised_WVandF(l, m, n, l_prime, m_prime, n_prime, n_max_ls, r_max, beta, k_bin_edges, k_bin_heights, omega_matter, omega_matters_interp, Ws_interp, Vs_interp, Fs_interp, SN, nbar):
+def computeExpectationParametrised_WVandF(l, m, n, l_prime, m_prime, n_prime, n_max_ls, r_max, beta, k_bin_edges, k_bin_heights, omega_matter, omega_matters_interp, Ws_interp, Vs_interp, F, SN, nbar):
     # Note on units
     # Signal ∝ nbar*nbar
     # Noise ∝ nbar
@@ -347,8 +347,7 @@ def computeExpectationParametrised_WVandF(l, m, n, l_prime, m_prime, n_prime, n_
 
         for n_prime_prime in range(n_max_l + 1):
             k_ln_prime_prime = sphericalBesselZeros[l][n_prime_prime] / r_max
-
-
+                    
             # Interpolate to obtain W^l_nn'(Ωₘ)
             # Interpolate manually because using np.interp is slow
             # omega_matter_min, omega_matter_max = 0.307, 0.320
@@ -362,37 +361,32 @@ def computeExpectationParametrised_WVandF(l, m, n, l_prime, m_prime, n_prime, n_
 
             max_index = round((omega_matter_max - omega_matter_min) / step)
 
-            if index == max_index:
-                W_n_nprimeprime = Ws_interp[l][n][n_prime_prime][index]
-                W_nprime_nprimeprime = Ws_interp[l][n_prime][n_prime_prime][index]
+            for n_1 in range(n_max_l + 1):
+                for n_3 in range(n_max_l + 1):
 
-                # Added
-                V_n_nprimeprime = Vs_interp[l][n][n_prime_prime][index]
-                V_nprime_nprimeprime = Vs_interp[l][n_prime][n_prime_prime][index]
+                    if index == max_index:
+                        W_n1_nprimeprime = Ws_interp[l][n_1][n_prime_prime][index]
+                        W_n3_nprimeprime = Ws_interp[l][n_3][n_prime_prime][index]
 
-                F_n_nprimeprime = Fs_interp[l][n][n_prime_prime][index]
-                F_nprime_nprimeprime = Fs_interp[l][n_prime][n_prime_prime][index]
-            else:
-                x1, x2 = omega_matters_interp[index], omega_matters_interp[index + 1]
+                        # Added
+                        V_n1_nprimeprime = Vs_interp[l][n_1][n_prime_prime][index]
+                        V_n3_nprimeprime = Vs_interp[l][n_3][n_prime_prime][index]
 
-                W_n_nprimeprime = interp(omega_matter, x1, x2, Ws_interp[l][n][n_prime_prime][index], Ws_interp[l][n][n_prime_prime][index + 1])
-                W_nprime_nprimeprime = interp(omega_matter, x1, x2, Ws_interp[l][n_prime][n_prime_prime][index], Ws_interp[l][n_prime][n_prime_prime][index + 1])
+                    else:
+                        x1, x2 = omega_matters_interp[index], omega_matters_interp[index + 1]
 
-                # Added
-                V_n_nprimeprime = interp(omega_matter, x1, x2, Vs_interp[l][n][n_prime_prime][index], Vs_interp[l][n][n_prime_prime][index + 1])
-                V_nprime_nprimeprime = interp(omega_matter, x1, x2, Vs_interp[l][n_prime][n_prime_prime][index], Vs_interp[l][n_prime][n_prime_prime][index + 1])
+                        W_n1_nprimeprime = interp(omega_matter, x1, x2, Ws_interp[l][n_1][n_prime_prime][index], Ws_interp[l][n_1][n_prime_prime][index + 1])
+                        W_n3_nprimeprime = interp(omega_matter, x1, x2, Ws_interp[l][n_3][n_prime_prime][index], Ws_interp[l][n_3][n_prime_prime][index + 1])
 
-                F_n_nprimeprime = interp(omega_matter, x1, x2, Fs_interp[l][n][n_prime_prime][index], Fs_interp[l][n][n_prime_prime][index + 1])
-                F_nprime_nprimeprime = interp(omega_matter, x1, x2, Fs_interp[l][n_prime][n_prime_prime][index], Fs_interp[l][n_prime][n_prime_prime][index + 1])
-            
-            # old
-            # answer += W_n_nprimeprime * np.conj(W_nprime_nprimeprime) * P_parametrised(k_ln_prime_prime, k_bin_edges, k_bin_heights)
+                        # Added
+                        V_n1_nprimeprime = interp(omega_matter, x1, x2, Vs_interp[l][n_1][n_prime_prime][index], Vs_interp[l][n_1][n_prime_prime][index + 1])
+                        V_n3_nprimeprime = interp(omega_matter, x1, x2, Vs_interp[l][n_3][n_prime_prime][index], Vs_interp[l][n_3][n_prime_prime][index + 1])
+                    
+                    # old
+                    # answer += W_n_nprimeprime * np.conj(W_nprime_nprimeprime) * P_parametrised(k_ln_prime_prime, k_bin_edges, k_bin_heights)
 
-            # old
-            # answer += (W_n_nprimeprime + beta * V_n_nprimeprime) * np.conj(W_nprime_nprimeprime + beta * V_nprime_nprimeprime) * P_parametrised(k_ln_prime_prime, k_bin_edges, k_bin_heights)
-            
-            # new
-            answer += (F_n_nprimeprime * (W_n_nprimeprime + beta * V_n_nprimeprime)) * np.conj(F_nprime_nprimeprime * (W_nprime_nprimeprime + beta * V_nprime_nprimeprime)) * P_parametrised(k_ln_prime_prime, k_bin_edges, k_bin_heights)
+                    # new
+                    answer +=  (F[l][n][n_1] * (W_n1_nprimeprime + beta * V_n1_nprimeprime)) * np.conj(F[l][n_prime][n_3] * (W_n3_nprimeprime + beta * V_n3_nprimeprime)) * P_parametrised(k_ln_prime_prime, k_bin_edges, k_bin_heights)
 
         # Shot noise term
         answer += SN[l][n][n_prime] / nbar
@@ -401,7 +395,7 @@ def computeExpectationParametrised_WVandF(l, m, n, l_prime, m_prime, n_prime, n_
 
 
 @jit(nopython=True)
-def computeLikelihoodParametrised_WVandF(f_lmn, n_max_ls, r_max, omega_matter, beta, k_bin_edges, k_bin_heights, omega_matters_interp, Ws_interp, Vs_interp, Fs_interp, SN, nbar):
+def computeLikelihoodParametrised_WVandF(f_lmn, n_max_ls, r_max, omega_matter, beta, k_bin_edges, k_bin_heights, omega_matters_interp, Ws_interp, Vs_interp, F, SN, nbar):
 # new variables: beta and Vs_interp
 
     shape = f_lmn.shape
@@ -426,7 +420,7 @@ def computeLikelihoodParametrised_WVandF(f_lmn, n_max_ls, r_max, omega_matter, b
         for n1 in range(n_min_l, n_max_l + 1):
             for n2 in range(n_min_l, n_max_l + 1):
 
-                sigma_l[n1 - n_min_l][n2 - n_min_l] = computeExpectationParametrised_WVandF(l, 0, n1, l, 0, n2, n_max_ls, r_max, beta, k_bin_edges, k_bin_heights, omega_matter, omega_matters_interp, Ws_interp, Vs_interp, Fs_interp, SN, nbar)
+                sigma_l[n1 - n_min_l][n2 - n_min_l] = computeExpectationParametrised_WVandF(l, 0, n1, l, 0, n2, n_max_ls, r_max, beta, k_bin_edges, k_bin_heights, omega_matter, omega_matters_interp, Ws_interp, Vs_interp, F, SN, nbar)
                 # Set l = l' and m = m' = 0 since the expectation does not vary with m
 
         # Invert it
