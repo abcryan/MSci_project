@@ -98,14 +98,14 @@ def plotField(grid, title="", colorbarLabel=r'$\delta(r, \theta, \phi)$', saveFi
     # title = r"$\delta(\mathbf{r})$ at $r$=%.2f" % radii_true[i] + "\n" + "$r_{max}$=%.2f, $k_{max}$=%d, $l_{max}$=%d" % (r_max_true, k_max, l_max)
 
     fig, ax = grid.plot(
-        projection=ccrs.Mollweide(),
+        # projection=ccrs.Mollweide(),
         colorbar='right',
         cb_label=colorbarLabel,
         title=title,
-        grid=True,
+        grid=False,
         show=False)
     
     if saveFileName:
-        plt.savefig("field.svg", transparent=True, dpi=300)
+        plt.savefig("field.png", transparent=False, dpi=300)
 
     plt.show()
