@@ -30,7 +30,7 @@ def calculate_all_GorH(l_max, k_max, r_max, F, WorV):
         n_max_l = calc_n_max_l(l, k_max, r_max)
         for n1 in range(n_max_l + 1):
             for n2 in range(n_max_l + 1):
-                GorH_lnn_prime[l][n1][n2] = np.sum(F[l, n1, :] * WorV[l, :, n2])
+                GorH_lnn_prime[l, n1, n2] = np.sum(F[l, n1, :] * WorV[l, :, n2])
                 # for n in range(n_max_l + 1):
                 #     GorH_lnn_prime_METHOD2[l][n1][n2] += (F[l, n1, n]*WorV[l, n, n2])
 

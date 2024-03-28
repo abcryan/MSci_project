@@ -36,7 +36,7 @@ def P_Top_Hat(k, k_max=200):
 #########################
 ### SET UP PARAMETERS ###
 
-l_max = 100 #70 # 40 # 25 # 15
+l_max = 15 #70 # 40 # 25 # 15
 k_max = 200 
 r_max_true = 0.75
 n_max = calc_n_max_l(0, k_max, r_max_true) # There are the most modes when l=0

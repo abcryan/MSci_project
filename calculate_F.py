@@ -74,8 +74,7 @@ def integrand(y, r, l, k_ln, k_ln_prime, sigma):
     # y0 = np.interp(y, r_vals, r0_vals)  # dont' know if needed...
     gaussian = np.exp(-(r - y)**2 / (2 * sigma**2)) / (np.sqrt(2 * np.pi) * sigma)
 
-    return gaussian * spherical_jn_numba(l, k_ln_prime*y) * spherical_jn_numba(l, k_ln*r) * r*y
-
+    return gaussian * spherical_jn_numba(l, k_ln_prime*y) * spherical_jn_numba(l, k_ln*r) * r * y
 
 
 # Perform the outer integration over y
@@ -94,7 +93,7 @@ def integrate_over_y(r, l, k_ln, k_ln_prime, r0_max, sigma):
     return result
 
 
-def calculate_F(n, n_prime, l, r_max, r0_vals, r_vals, sigma):
+def calculate_F(n, n_prime, l, r_max, sigma):
 
     """
     Again use r_max = r_max_0 in order to keep the k_ln modes the same. The value of the integral should not change
@@ -151,7 +150,7 @@ def calculate_F(n, n_prime, l, r_max, r0_vals, r_vals, sigma):
 
 
 # THIS IS THE FUNCTION THAT IS CALLED FOR THE ANALYSIS
-def calculate_all_F(l_max, k_max, r_max, r0_vals, r_vals, sigma):
+def calculate_all_F(l_max, k_max, r_max, sigma):
     # The maximum number of modes is when l=0
     n_max_0 = calc_n_max_l(0, k_max, r_max)
     F_lnn_prime = np.zeros((l_max + 1, n_max_0 + 1, n_max_0 + 1))
@@ -162,7 +161,7 @@ def calculate_all_F(l_max, k_max, r_max, r0_vals, r_vals, sigma):
         
         for n1 in range(n_max_l + 1):
             for n2 in range(n_max_l + 1):
-                F_lnn_prime[l][n1][n2] = calculate_F(n1, n2, l, r_max, r0_vals, r_vals, sigma)
+                F_lnn_prime[l][n1][n2] = calculate_F(n1, n2, l, r_max, sigma)
 
     return F_lnn_prime
 

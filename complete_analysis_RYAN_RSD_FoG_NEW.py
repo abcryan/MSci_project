@@ -141,14 +141,13 @@ F_saveFileName = "data/F_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-%.5f_l_max-%d_
 if path.exists(F_saveFileName):
     F = np.load(F_saveFileName)
 else:
-    print("Computing F's for Ωₘ = %.4f." % omega_matter_true)
-    r0_vals, r_vals = getInterpolatedR0ofRValues(omega_matter_0, omega_matter_true) # not needed I think
-    F = calculate_all_F(l_max, k_max, r_max_0, r0_vals, r_vals, sigma)
+    print("Computing F matrix")
+    F = calculate_all_F(l_max, k_max, r_max_0, sigma)
     np.save(F_saveFileName, F)
 
 W_true = np.load(W_saveFileName)
 V_true = np.load(V_saveFileName)
-F_true = np.load(F_saveFileName)
+F_matrix = np.load(F_saveFileName)
 
 
 # Calculate new G AND H MATRIX: 
@@ -158,21 +157,21 @@ if path.exists(G_saveFileName):
     G = np.load(G_saveFileName)
 else:
     print("Computing G's for Ωₘ = %.4f." % omega_matter_true)
-    G = calculate_all_GorH(l_max, k_max, r_max_0, F_true, W_true)
-    # np.save(G_saveFileName, G)
+    G = calculate_all_GorH(l_max, k_max, r_max_0, F_matrix, W_true)
+    np.save(G_saveFileName, G)
 
 H_saveFileName = "data/H_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-%.5f_l_max-%d_k_max-%.2f_r_max_0-%.4f_R-%.3f_sigma-%.4f.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_0, R, sigma)
 if path.exists(H_saveFileName):
     H = np.load(H_saveFileName)
 else:
     print("Computing H's for Ωₘ = %.4f." % omega_matter_true)
-    H = calculate_all_GorH(l_max, k_max, r_max_0, F_true, V_true)
-    # np.save(H_saveFileName, H)
+    H = calculate_all_GorH(l_max, k_max, r_max_0, F_matrix, V_true)
+    np.save(H_saveFileName, H)
 
 G_true = np.load(G_saveFileName)
 H_true = np.load(H_saveFileName)
 
-# Calculate new coefficients of the TRUE field:
+# Calculate the coefficients of the OBSERVED field (The Galaxy Survey data):
 
 roh_lmn = np.zeros(f_lmn_true.shape, dtype=complex)
 for l in range(l_max + 1):
@@ -270,22 +269,22 @@ for omega_matter in omega_matters:
     Vs.append(V)
 
 #%%
-# Compute F's
-Fs = []
-for omega_matter in omega_matters:
-    # F_saveFileName = "data/F_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-%.5f_l_max-%d_k_max-%.2f_r_max_0-%.4f_R-%.3f_sigma-%.4f.npy" % (omega_matter, omega_matter_0, l_max, k_max, r_max_0, R, sigma)
-    # if path.exists(F_saveFileName):
-    #     F = np.load(F_saveFileName)
-    # else:
-    #     print("Computing F's for Ωₘ = %.4f." % omega_matter)
-    #     r0_vals, r_vals = getInterpolatedR0ofRValues(omega_matter_0, omega_matter)
-    #     F = calculate_all_F(l_max, k_max, r_max_0, r0_vals, r_vals, sigma)
+# # Compute F's
+# Fs = []
+# for omega_matter in omega_matters:
+#     # F_saveFileName = "data/F_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-%.5f_l_max-%d_k_max-%.2f_r_max_0-%.4f_R-%.3f_sigma-%.4f.npy" % (omega_matter, omega_matter_0, l_max, k_max, r_max_0, R, sigma)
+#     # if path.exists(F_saveFileName):
+#     #     F = np.load(F_saveFileName)
+#     # else:
+#     #     print("Computing F's for Ωₘ = %.4f." % omega_matter)
+#     #     r0_vals, r_vals = getInterpolatedR0ofRValues(omega_matter_0, omega_matter)
+#     #     F = calculate_all_F(l_max, k_max, r_max_0, r0_vals, r_vals, sigma)
 
-    #     np.save(F_saveFileName, F)
+#     #     np.save(F_saveFileName, F)
     
-    # F = np.load(F_saveFileName)
-    F = np.load(F_saveFileName) # just copy all the F's from the previous cell
-    Fs.append(F)
+#     # F = np.load(F_saveFileName)
+#     F = np.load(F_saveFileName) # just copy all the F's from the previous cell
+#     Fs.append(F)
 #%%
 
 # Compute G's and H's
@@ -299,8 +298,8 @@ for omega_matter in omega_matters:
         G = np.load(G_saveFileName)
     else:
         W_matrix = Ws[i]
-        G = calculate_all_GorH(l_max, k_max, r_max_0, F_true, W_matrix)
-        # np.save(G_saveFileName, G)
+        G = calculate_all_GorH(l_max, k_max, r_max_0, F_matrix, W_matrix)
+        np.save(G_saveFileName, G)
     
     G = np.load(G_saveFileName)
     Gs.append(G)
@@ -313,8 +312,8 @@ for omega_matter in omega_matters:
         H = np.load(H_saveFileName)
     else:
         V_matrix = Vs[j]
-        H = calculate_all_GorH(l_max, k_max, r_max_0, F_true, V_matrix)
-        # np.save(H_saveFileName, H)
+        H = calculate_all_GorH(l_max, k_max, r_max_0, F_matrix, V_matrix)
+        np.save(H_saveFileName, H)
     
     H = np.load(H_saveFileName)
     Hs.append(H)
@@ -327,8 +326,8 @@ for omega_matter in omega_matters:
 #MCMC requires us to be able to evaluate the likelihood for arbitrary values of Ωₘ, so interpolate W^l_nn' (Ωₘ)    
 step = 0.00001
 # omega_matters_interp, Ws_interp = interpolate_W_values(l_max, n_max_ls, omega_matters, Ws, step=step)
-# omega_matters_interp, Ws_interp, Vs_interp = interpolate_WandV_values(l_max, n_max_ls, omega_matters, Ws, Vs, step=step)
-omega_matters_interp, Ws_interp, Vs_interp, Fs_interp = interpolate_WVandF_values(l_max, n_max_ls, omega_matters, Ws, Vs, Fs, step=step)
+omega_matters_interp, Gs_interp, Hs_interp = interpolate_WandV_values(l_max, n_max_ls, omega_matters, Gs, Hs, step=step)
+# omega_matters_interp, Ws_interp, Vs_interp, Fs_interp = interpolate_WVandF_values(l_max, n_max_ls, omega_matters, Ws, Vs, Fs, step=step)
 omega_matter_min, omega_matter_max = omega_matters_interp[0], omega_matters_interp[-1]
 
 beta_min = 0.0
@@ -353,7 +352,8 @@ def log_likelihood(theta):
     omega_matter, beta, *k_bin_heights = theta
     k_bin_heights = np.array(k_bin_heights)
     nbar = 1e9
-    return computeLikelihoodParametrised_WVandF(f_lmn_0, n_max_ls, r_max_0, omega_matter, beta, k_bin_edges, k_bin_heights, omega_matters_interp, Ws_interp, Vs_interp, F, SN, nbar)
+    # return computeLikelihoodParametrised_WVandF(f_lmn_0, n_max_ls, r_max_0, omega_matter, beta, k_bin_edges, k_bin_heights, omega_matters_interp, Ws_interp, Vs_interp, F, SN, nbar)
+    return computeLikelihoodParametrised_WandV(f_lmn_0, n_max_ls, r_max_0, omega_matter, beta, k_bin_edges, k_bin_heights, omega_matters_interp, Gs_interp, Hs_interp, SN, nbar)
 ########
 
 def log_probability(theta):
@@ -366,8 +366,8 @@ def log_probability(theta):
 # %%
 # calculate Monte Carlo Markov Chain
 
-steps = 2000
-n_walkers = 28
+steps = 4000
+n_walkers = 32
 burnin = 200
 
 pos = np.array([0.315, 0.5, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 12)
