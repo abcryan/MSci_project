@@ -36,7 +36,7 @@ def P_Top_Hat(k, k_max=200):
 #########################
 ### SET UP PARAMETERS ###
 
-l_max = 15 #70 # 40 # 25 # 15
+l_max = 100 #70 # 40 # 25 # 15
 k_max = 200 
 r_max_true = 0.75
 n_max = calc_n_max_l(0, k_max, r_max_true) # There are the most modes when l=0
@@ -44,7 +44,7 @@ n_max_ls = np.array([calc_n_max_l(l, k_max, r_max_true) for l in range(l_max + 1
 R = 0.25    # Selection function scale length
 
 omega_matter_true = 0.315
-omega_matter_0 = 0.315      # observed
+omega_matter_0 = 0.315      # fiducial
 
 P_amp = 1
 
@@ -52,11 +52,12 @@ P_amp = 1
 b_true = 1.0   # galaxy bias parameter, 1.0 <= b <= 1.5 usually in RSD Surveys
 beta_true = omega_matter_true**0.6 / b_true
 # beta_true = 0.0
+
+
 #########################
 #########################
 
 # More sophisticated power specturm
-
 k_bin_edges, k_bin_heights = create_power_spectrum(k_max, 10, np.array([0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]))
 # k_bin_edges, k_bin_heights = create_power_spectrum(k_max, 2, np.array([0.35, 0.8]))
 k_vals = np.linspace(0, 400, 1000)
@@ -75,6 +76,12 @@ plt.show()
 def P_para(k, k_max=200):
     return P_parametrised(k, k_bin_edges, k_bin_heights)
 
+#selection function
+@jit(nopython=True)
+def phiOfR0(r0):
+    return np.exp(-r0*r0 / (2*R*R))
+
+
 # %%
 # Calculate c_ln coefficients of true SBT with infinite r
 c_ln_values_without_r_max = get_c_ln_values_without_r_max("c_ln.csv")
@@ -82,34 +89,27 @@ c_ln_values_without_r_max = get_c_ln_values_without_r_max("c_ln.csv")
 # Calculate spherical Bessel zeros
 sphericalBesselZeros = loadSphericalBesselZeros("zeros.csv")
 
+# %%
 # Generate true field
 radii_true = np.linspace(0, r_max_true, 1001)  
 z_true, all_grids, f_lmn_true = generateTrueField(radii_true, omega_matter_true, r_max_true, l_max, k_max, P_para)
 
 #%%
-#selection function
-@jit(nopython=True)
-def phiOfR0(r0):
-    return np.exp(-r0*r0 / (2*R*R))
-
-#########################
-### Observed Quantities ###
+### Generate GALAXY SURVEY DATA = Observed field ###
 
 r_of_z_fiducial = getInterpolatedRofZ(omega_matter_0)
 radii_fiducial = r_of_z_fiducial(z_true)
 r_max_0 = radii_fiducial[-1]
 
-# Old way of computing the observed field
-# radii_true, all_observed_grids = multiplyFieldBySelectionFunction(radii_true, all_grids, phiOfR0)
-
-# For the NEW WAY we first need to calculate the W and V matrices but only where omega_true = omega_0
+# NEW WAY OF COMPUTING OBSERVED FIELD COEFFICIENTS
+# For the NEW WAY we first need to calculate the W and V matrices but only where omega = omega_matter_0
 
 # Calculate W and V matrix for which omega_matter_true = omega_matter_0
 W_saveFileName = "data/W_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-%.5f_l_max-%d_k_max-%.2f_r_max_0-%.4f_R-%.3f.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_0, R)
 if path.exists(W_saveFileName):
     W = np.load(W_saveFileName)
 else:
-    print("Computing W's for Ωₘ = %.4f." % omega_matter_true)
+    print("Computing W's for Ωₘ = %.4f." % omega_matter_0)
     r0_vals, r_vals = getInterpolatedR0ofRValues(omega_matter_0, omega_matter_true)
     W_integrand_numba = make_W_integrand_numba(phiOfR0)     
     W = calc_all_W_numba(l_max, k_max, r_max_0, r0_vals, r_vals, W_integrand_numba)
@@ -119,45 +119,40 @@ V_saveFileName = "data/V_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-%.5f_l_max-%d_
 if path.exists(V_saveFileName):
     V = np.load(V_saveFileName)
 else:
-    print("Computing V's for Ωₘ = %.4f." % omega_matter_true)
+    print("Computing V's for Ωₘ = %.4f." % omega_matter_0)
     r0_vals, r_vals = getInterpolatedR0ofRValues(omega_matter_0, omega_matter_true)
     V_integrand_numba = make_V_integrand_numba(phiOfR0)     
     V = calc_all_V_numba(l_max, k_max, r_max_0, r0_vals, r_vals, V_integrand_numba)
     np.save(V_saveFileName, V)
 
-W_true = np.load(W_saveFileName)
-V_true = np.load(V_saveFileName)
+W_observed = np.load(W_saveFileName)
+V_observed = np.load(V_saveFileName)
 
-# Calculate new coefficients:
-
-roh_lmn = np.zeros(f_lmn_true.shape, dtype=complex)
+# Calculate observed field coefficients: n_lmn
+n_lmn = np.zeros(f_lmn_true.shape, dtype=complex)
 for l in range(l_max + 1):
     for m in range(l + 1):
         for n in range(n_max_ls[l] + 1):
-            roh_lmn[l][m][n] = np.sum((W_true[l][n] + beta_true * V_true[l][n]) * f_lmn_true[l][m])
+            n_lmn[l][m][n] = np.sum((W_observed[l][n] + beta_true * V_observed[l][n]) * f_lmn_true[l][m])
 
-# %%
-# Generate observed field via a different way
-radii_true = np.linspace(0, r_max_true, 1001)  
-radii_observed_METHOD2, all_observed_grids_METHOD2 = generateGeneralField_given_delta_lmn(radii_true, omega_matter_true, r_max_true, l_max, k_max, P_para, roh_lmn)
+## %%
+# Old way of computing the observed field
+# radii_true, all_observed_grids = multiplyFieldBySelectionFunction(radii_true, all_grids, phiOfR0)
 
-#%%
+# # Generate observed field via a different way (to check if coefficients were generated correctly with the NEW METHOD)
+# radii_true = np.linspace(0, r_max_true, 1001)  
+# radii_observed_METHOD2, all_observed_grids_METHOD2 = generateGeneralField_given_delta_lmn(radii_true, omega_matter_true, r_max_true, l_max, k_max, P_para, n_lmn)
 
-# Perform the spherical Bessel transform to obtain the coefficients
-
-### IMPORTANT NEED TO RECOMPUTE EVERYTIME YOU UPDATE THE POWER SPECTRUM ###
-
-#f_lmn_0_saveFileName = "data_Ryan/data_F_lmn_0/f_lmn_0_true-%.3f_fiducial-%.3f_l_max-%d_k_max-%.2f_r_max_true-%.3f_R-%.3f_P-amp_%.2f.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_true, R, P_amp)
-#f_lmn_0_saveFileName = "data/f_lmn_0_true-%.3f_fiducial-%.3f_l_max-%d_k_max-%.2f_r_max_true-%.3f_R-%.3f_P-amp_%.2f.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_true, R, P_amp)
-f_lmn_0_saveFileName = "data/f_lmn_0_true-%.3f_fiducial-%.3f_l_max-%d_k_max-%.2f_r_max_true-%.3f_R-%.3f_P-parametrised-2023-11-27-10-bins_%.3f.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_true, R, beta_true)
-if path.exists(f_lmn_0_saveFileName):
-    f_lmn_0 = np.load(f_lmn_0_saveFileName)
-else:
-    print('calculating observed f_lmn coefficients ...')
-    f_lmn_0 = calc_f_lmn_0(radii_fiducial, all_observed_grids_METHOD2, l_max, k_max, n_max)
-    # Save coefficients to a file for future use
-    np.save(f_lmn_0_saveFileName, f_lmn_0)
-    print("Done! File saved to", f_lmn_0_saveFileName)
+# # Perform the spherical Bessel transform to obtain the coefficients
+# f_lmn_0_saveFileName = "data/f_lmn_0_true-%.3f_fiducial-%.3f_l_max-%d_k_max-%.2f_r_max_true-%.3f_R-%.3f_P-parametrised-2023-11-27-10-bins_%.3f.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_true, R, beta_true)
+# if path.exists(f_lmn_0_saveFileName):
+#     f_lmn_0 = np.load(f_lmn_0_saveFileName)
+# else:
+#     print('calculating observed f_lmn coefficients ...')
+#     f_lmn_0 = calc_f_lmn_0(radii_fiducial, all_observed_grids_METHOD2, l_max, k_max, n_max)
+#     # Save coefficients to a file for future use
+#     np.save(f_lmn_0_saveFileName, f_lmn_0)
+#     print("Done! File saved to", f_lmn_0_saveFileName)
 
 #########################
 #########################
@@ -168,12 +163,10 @@ else:
 
 # Initialize
 omega_matters = np.linspace(omega_matter_0 - 0.008, omega_matter_0 + 0.005, 14)
-omega_matters_inference = np.linspace(omega_matter_0 - 0.007, omega_matter_0 + 0.005, 97)
-P_amps = np.linspace(0.15, 1.05, 51)
-betas = np.linspace(0.0, 0.7, 51)           # RSD parameter
+# omega_matters = np.linspace(omega_matter_0 - 0.012, omega_matter_0 + 0.012, 18)
+# P_amps = np.linspace(0.05, 1.05, 51)
 # P_amps = np.linspace(0.95, 1.05, 51)
-# likelihoods = np.zeros((np.size(omega_matters_inference), np.size(P_amps)))
-likelihoods = np.zeros((np.size(omega_matters_inference), np.size(P_amps), np.size(betas)))
+# betas = np.linspace(0.0, 0.7, 51)           # RSD parameter
 
 #%%
 # Compute W's
@@ -228,7 +221,6 @@ for omega_matter in omega_matters:
     Vs.append(V)
 
 #%%
-
 # Use MCMC to perform likelihood analysis
 
 #MCMC requires us to be able to evaluate the likelihood for arbitrary values of Ωₘ, so interpolate W^l_nn' (Ωₘ)    
@@ -248,13 +240,11 @@ def log_prior(theta):
         return 0.0
     return -np.inf
 
-#TODOOO change this to the new likelihood and update the compute_likekihood_WandVfile
 def log_likelihood(theta):
     omega_matter, beta, *k_bin_heights = theta
     k_bin_heights = np.array(k_bin_heights)
     nbar = 1e9
-    return computeLikelihoodParametrised_WandV(f_lmn_0, n_max_ls, r_max_0, omega_matter, beta, k_bin_edges, k_bin_heights, omega_matters_interp, Ws_interp, Vs_interp, SN, nbar)
-########
+    return computeLikelihoodParametrised_WandV(n_lmn, n_max_ls, r_max_0, omega_matter, beta, k_bin_edges, k_bin_heights, omega_matters_interp, Ws_interp, Vs_interp, SN, nbar)
 
 def log_probability(theta):
     lp = log_prior(theta)
@@ -266,7 +256,7 @@ def log_probability(theta):
 # %%
 # calculate Monte Carlo Markov Chain
 
-steps = 4500
+steps = 8000
 n_walkers = 32
 burnin = 300
 

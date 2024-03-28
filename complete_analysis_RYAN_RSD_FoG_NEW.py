@@ -366,7 +366,7 @@ def log_probability(theta):
 # %%
 # calculate Monte Carlo Markov Chain
 
-steps = 4000
+steps = 2000
 n_walkers = 32
 burnin = 200
 
