@@ -36,7 +36,7 @@ def P_Top_Hat(k, k_max=200):
 #########################
 ### SET UP PARAMETERS ###
 
-l_max = 100 #70 # 40 # 25 # 15
+l_max = 25 #70 # 40 # 25 # 15
 k_max = 200 
 r_max_true = 0.75
 n_max = calc_n_max_l(0, k_max, r_max_true) # There are the most modes when l=0
@@ -219,6 +219,8 @@ for omega_matter in omega_matters:
     
     V = np.load(V_saveFileName)
     Vs.append(V)
+
+print(np.shape(Ws))
 
 #%%
 # Use MCMC to perform likelihood analysis

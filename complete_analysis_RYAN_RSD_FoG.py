@@ -48,7 +48,7 @@ R = 0.25    # Selection function scale length
 sigma = 0.001 # velocity dispersion
 
 omega_matter_true = 0.315
-omega_matter_0 = 0.315      # fiducial
+omega_matter_0 = 0.310      # fiducial
 
 P_amp = 1
 
@@ -56,7 +56,6 @@ P_amp = 1
 b_true = 1.0   # galaxy bias parameter, 1.0 <= b <= 1.5 usually in RSD Surveys
 beta_true = omega_matter_true**0.6 / b_true
 # beta_true = 0.0
-
 
 #########################
 #########################
@@ -197,8 +196,12 @@ for l in range(l_max + 1):
 #########################
 ### Likelihood Calculation ###
 
+
+# print(W_observed[:,20,29])
 # Initialize
-omega_matters = np.linspace(omega_matter_0 - 0.008, omega_matter_0 + 0.005, 14)
+# omega_matters = np.linspace(omega_matter_0 - 0.008, omega_matter_0 + 0.005, 14)
+omega_matters = np.linspace(omega_matter_0 - 0.010, omega_matter_0 + 0.010, 21)
+
 # omega_matters = np.linspace(omega_matter_0 - 0.012, omega_matter_0 + 0.012, 18)
 # P_amps = np.linspace(0.05, 1.05, 51)
 # P_amps = np.linspace(0.95, 1.05, 51)
@@ -290,6 +293,7 @@ for omega_matter in omega_matters:
     Hs.append(H)
     j+=1
 
+
 #%%
 # Use MCMC to perform likelihood analysis
 
@@ -329,9 +333,9 @@ def log_probability(theta):
 # %%
 # calculate Monte Carlo Markov Chain
 
-steps = 8000
-n_walkers = 42
-burnin = 4000
+steps = 2000
+n_walkers = 32
+burnin = 300
 
 pos = np.array([0.315, 0.5, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 12)
 nwalkers, ndim = pos.shape      #nwalkers = number of walkers, ndim = number of dimensions in parameter space
@@ -621,5 +625,49 @@ def plot_2d_likelihood(samples, x_index, y_index, labels, truths=None, sigmas=[0
 # Example usage:
 labels = ['Ωm', 'β'] # Replace with your parameter names
 plot_2d_likelihood(flat_samples, x_index=0, y_index=1, labels=labels, truths=[0.315, 0.5])
+
+# %%
+
+import seaborn as sns
+
+# Violin plot
+
+powerSpectrumSamples = sampler.get_chain(discard=burnin, flat=True)[:, 2:] # Ignore first two columns, which is omega_matter and beta
+
+plt.figure(dpi=400, figsize=(8,6))
+violin_plot = plt.violinplot(powerSpectrumSamples, showmeans=False, widths=0.7)
+
+plt.plot([i+1 for i in range(10)], [0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3], "o", label="Truth", c="k",markersize=3)
+# plt.grid(color='#EEEEEE', linestyle=':', linewidth=1.2)
+
+# plot the background power spectrum
+k_vals = np.linspace(0, 201, 5000)
+P_vals = [P_parametrised(k, k_bin_edges, k_bin_heights) for k in k_vals]
+plt.plot(k_vals * (10/200) + 0.5, P_vals, c="grey", zorder=0, lw=1, alpha=0.8)
+
+
+color = "red"
+color_fill = "orange"
+
+for violin in violin_plot['bodies']:
+    violin.set_color(color_fill)
+    violin.set_alpha(0.5)
+    violin.set_edgecolor("red")
+
+parts = ["cmins", "cmaxes", "cbars"]
+for part in parts:
+    violin_plot[part].set_color(color)
+
+handles, labels = plt.gca().get_legend_handles_labels()
+handles.insert(0, violin_plot["bodies"][0])
+labels.insert(0, "Samples")
+plt.legend(handles, labels)
+plt.xticks([i+1 for i in range(10)], [i+1 for i in range(10)])
+plt.xlabel(r'Bin $i$')
+plt.ylabel("$P_{i}$")
+plt.ylim(0)
+plt.xlim(0.5)
+plt.savefig("Plots/violin_plot.png")
+plt.show()
 
 # %%

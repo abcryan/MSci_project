@@ -1,9 +1,8 @@
-# #%%
 import time
 import numpy as np
 from numba import jit
 import matplotlib.pyplot as plt
-from scipy.special import spherical_jn, jv
+from scipy.special import spherical_jn, jv, jn
 from scipy.integrate import quad, dblquad
 from scipy.interpolate import interp1d
 
@@ -81,7 +80,7 @@ def integrand(y, r, l, k_ln, k_ln_prime, sigma):
 def integrate_over_y(r, l, k_ln, k_ln_prime, r0_max, sigma):
     # Define your range for y here (this might be problem-specific)
     if (r > 5*sigma):
-        y_min = r - 4*sigma
+        y_min = r - 5*sigma
     else:
         y_min = 0
     if (r + 5*sigma < r0_max):
@@ -102,13 +101,13 @@ def calculate_F(n, n_prime, l, r_max, sigma):
     k_ln = sphericalBesselZeros[l][n] / r_max
     k_ln_prime = sphericalBesselZeros[l][n_prime] / r_max
 
-    # integral1, error1, t1 = 0, 0, 0
+    integral1, error1, t1 = 0, 0, 0
     integral2, error2, t2 = 0, 0, 0 
-    # integral3, error3, t3 = 0, 0, 0
+    integral3, error3, t3 = 0, 0, 0
 
     # # METHOD 1: Simply Integrate over r and y
     # s1 = time.perf_counter()
-    # integral1, error1 = dblquad(integrand, 0, r0_max, 0, r0_max, args=(l, k_ln, k_ln_prime, sigma))
+    # integral1, error1 = dblquad(integrand, 0, r_max, 0, r_max, args=(l, k_ln, k_ln_prime, sigma))
     # e1 = time.perf_counter()
     # # Calculate time
     # t1 = e1 - s1
@@ -142,9 +141,11 @@ def calculate_F(n, n_prime, l, r_max, sigma):
     # # Calculate time
     # t3 = e3 - s3
 
-    integral2 *= np.power(r_max, -3) * np.power(np.pi, -1) * c_ln_values_without_r_max[l][n] * c_ln_values_without_r_max[l][n_prime] * integral2 
+    integral2 *= np.power(r_max, -3) * np.power(np.pi, -1) * c_ln_values_without_r_max[l][n] * c_ln_values_without_r_max[l][n_prime] 
+    # integral1 *= np.power(r_max, -3) * np.power(np.pi, -1) * c_ln_values_without_r_max[l][n] * c_ln_values_without_r_max[l][n_prime]
+    # integral3 *= np.power(r_max, -3) * np.power(np.pi, -1) * c_ln_values_without_r_max[l][n] * c_ln_values_without_r_max[l][n_prime]
 
-    # return integral1, error1, t1, integral2, error2, t2, integral3, error3, t3
+    # return integral1, integral2, integral3
     return integral2
 
 
@@ -166,12 +167,87 @@ def calculate_all_F(l_max, k_max, r_max, sigma):
     return F_lnn_prime
 
 
-# l =0
-# n=0
-# n_prime = 0
-# r_max = 0.755
+
 # sigma = 0.001
 
+
+# from os import path
+
+# F_saveFileName = "data/F_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-%.5f_l_max-%d_k_max-%.2f_r_max_0-%.4f_R-%.3f_sigma-%.4f.npy" % (0.315, 0.315, 15, 200, 0.75, 0.25, sigma)
+# if path.exists(F_saveFileName):
+#     F = np.load(F_saveFileName)
+# else:
+#     print("no file found")
+
+
+# print("F-matrix entries at l=10 and n_prime=20: ")
+# print(F[10,:,20])
+
+# plt.plot(F[10,:,20])
+# plt.show()
+
+# k_max = 200
+# r_max = 0.75
+
+
+
+# l=15
+# # n1 = 20
+# # n2 = 20
+# r_max = 0.75
+# sigma = 0.001
+
+# # result1, result2, result3, result4 = calculate_F(n1, n2, l, 0.75, sigma)   
+# # print("Result 1: ", result1)
+# # print("Result 2: ", result2)
+# # print("Result 3: ", result3)
+# # print("Result 4: ", result4)
+# n1 = 18
+
+# n_max_0 = calc_n_max_l(0, k_max, r_max)
+# f1 = np.zeros((n_max_0 + 1))
+# f2 = np.zeros((n_max_0 + 1))
+# f3 = np.zeros((n_max_0 + 1))
+# n_max_l = calc_n_max_l(l, k_max, r_max)
+# for n2 in range(n_max_l + 1):
+#     print("calculating F for n1=%d, n2=%d" % (n1, n2))
+#     f1[n2], f2[n2], f3[n2] = calculate_F(n1, n2, l, r_max, sigma)
+
+# n_arr = np.arange(n_max_0 + 1)
+# plt.plot(n_arr, f1, label="dblquad")
+# plt.plot(n_arr, f2, label="+- sigma",linestyle="--")
+# plt.plot(n_arr, f3, label="with zeros then dblquad",linestyle="-.")
+# plt.show()
+
+# # %%
+# plt.plot(n_arr, f1, label="dblquad")
+# plt.plot(n_arr, f2, label="+- sigma",linestyle="--")
+# plt.plot(n_arr, f3, label="with zeros then dblquad",linestyle="-.")
+# plt.legend()
+# plt.show()
+
+# print(f1)
+# print(f2)
+# print(f3)
+
+# l=15
+# n1 = 18
+# n2 = 18
+
+# result1, result2, result3 = calculate_F(n1, n2, l, 0.75, sigma)   
+# print("Result 1: ", result1)
+# print("Result 2: ", result2)
+# print("Result 3: ", result3)
+
+
+# sigmas = np.array([0.00001, 0.00003, 0.0001, 0.0003,0.001,0.003,0.01,0.03,0.1,0.3,1,3,10,30,100,300, 1000, 3000])
+# Matrix = np.zeros((len(sigmas)))
+# for i in range(len(sigmas)):
+#     sigma = sigmas[i]
+#     Matrix[i] = calculate_F(18, 18, 15, 0.75, sigma)
+
+# plt.loglog(sigmas, Matrix)
+# plt.show()
 # #%%
 
 # integral1, error1,t1, integral2, error2,t2, integral3, error3,t3 = calculate_F(n, n_prime, l, r_max, r0_vals=0, r_vals=0, sigma=sigma)
@@ -185,7 +261,6 @@ def calculate_all_F(l_max, k_max, r_max, sigma):
 # print("Elapsed time Method 3: ", t3)
 
 # # print(spherical_jn_numba(15, -3), spherical_jn(15, -3))
-# # %%
 
 
 # # PLOT THE INTEGRAND
@@ -230,4 +305,6 @@ def calculate_all_F(l_max, k_max, r_max, sigma):
 
 # plt.show()
 
-# # %%
+
+
+
