@@ -128,7 +128,7 @@ else:
     V = calc_all_V_numba(l_max, k_max, r_max_0, r0_vals, r_vals, V_integrand_numba)
     np.save(V_saveFileName, V)
 
-F_saveFileName = "data/F_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-%.5f_l_max-%d_k_max-%.2f_r_max_0-%.4f_R-%.3f_sigma-%.4f.npy" % (omega_matter_true, omega_matter_0, l_max, k_max, r_max_0, R, sigma)
+F_saveFileName = "data/F_no_tayl_exp_zeros_omega_m-%.5f_omega_m_0-0.31500_l_max-%d_k_max-%.2f_r_max_0-%.4f_R-%.3f_sigma-%.4f.npy" % (omega_matter_true, l_max, k_max, r_max_true, R, sigma)
 if path.exists(F_saveFileName):
     F = np.load(F_saveFileName)
 else:
@@ -196,7 +196,7 @@ for l in range(l_max + 1):
 #########################
 ### Likelihood Calculation ###
 
-
+print(F_saveFileName)
 # print(W_observed[:,20,29])
 # Initialize
 # omega_matters = np.linspace(omega_matter_0 - 0.008, omega_matter_0 + 0.005, 14)
