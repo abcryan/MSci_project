@@ -36,7 +36,7 @@ def P_Top_Hat(k, k_max=200):
 #########################
 ### SET UP PARAMETERS ###
 
-l_max = 25 #70 # 40 # 25 # 15
+l_max = 100 #70 # 40 # 25 # 15
 k_max = 200 
 r_max_true = 0.75
 n_max = calc_n_max_l(0, k_max, r_max_true) # There are the most modes when l=0
@@ -44,7 +44,7 @@ n_max_ls = np.array([calc_n_max_l(l, k_max, r_max_true) for l in range(l_max + 1
 R = 0.25    # Selection function scale length
 
 omega_matter_true = 0.315
-omega_matter_0 = 0.315      # fiducial
+omega_matter_0 = 0.310      # fiducial
 
 P_amp = 1
 
@@ -58,7 +58,7 @@ beta_true = omega_matter_true**0.6 / b_true
 #########################
 
 # More sophisticated power specturm
-k_bin_edges, k_bin_heights = create_power_spectrum(k_max, 10, np.array([0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]))
+k_bin_edges, k_bin_heights = create_power_spectrum(k_max, 10, np.array([0.15, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]))
 # k_bin_edges, k_bin_heights = create_power_spectrum(k_max, 2, np.array([0.35, 0.8]))
 k_vals = np.linspace(0, 400, 1000)
 P_vals = [P_parametrised(k, k_bin_edges, k_bin_heights) for k in k_vals]
@@ -162,8 +162,8 @@ for l in range(l_max + 1):
 ### Likelihood Calculation ###
 
 # Initialize
-omega_matters = np.linspace(omega_matter_0 - 0.008, omega_matter_0 + 0.005, 14)
-# omega_matters = np.linspace(omega_matter_0 - 0.012, omega_matter_0 + 0.012, 18)
+# omega_matters = np.linspace(omega_matter_0 - 0.008, omega_matter_0 + 0.005, 14)
+omega_matters = np.linspace(omega_matter_0 - 0.010, omega_matter_0 + 0.010, 21)
 # P_amps = np.linspace(0.05, 1.05, 51)
 # P_amps = np.linspace(0.95, 1.05, 51)
 # betas = np.linspace(0.0, 0.7, 51)           # RSD parameter
@@ -258,42 +258,33 @@ def log_probability(theta):
 # %%
 # calculate Monte Carlo Markov Chain
 
-steps = 8000
+steps = 5000
 n_walkers = 32
 burnin = 300
 
-# Save the MCMC sample
-MCMC_sample_saveFileName = "MCMC_sample_data/Steps-%.0f_l_max-%d_k_max%.0d_r_max_true_%.2f_beta-%.1f.npy" % (steps, l_max, k_max, r_max_true, beta_true)
-if path.exists(MCMC_sample_saveFileName):
-    flat_samples = np.load(MCMC_sample_saveFileName)
-else:
+pos = np.array([0.315, 0.5, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 12)
+nwalkers, ndim = pos.shape      #nwalkers = number of walkers, ndim = number of dimensions in parameter space
+print("number of walkers: ", nwalkers)
 
-    pos = np.array([0.315, 0.5, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 12)
-    nwalkers, ndim = pos.shape      #nwalkers = number of walkers, ndim = number of dimensions in parameter space
-    print("number of walkers: ", nwalkers)
+sampler = emcee.EnsembleSampler(
+    nwalkers, ndim, log_probability
+)
+# Burn in
+print("Burn-in:")
+pos, prob, state = sampler.run_mcmc(pos, burnin, progress=True) 
+sampler.reset()
 
-    sampler = emcee.EnsembleSampler(
-        nwalkers, ndim, log_probability
-    )
-    # Burn in
-    print("Burn-in:")
-    pos, prob, state = sampler.run_mcmc(pos, burnin, progress=True) 
-    sampler.reset()
-
-    # Production run
-    print("Production run:")
-    sampler.run_mcmc(pos, steps, progress=True);
-    print("length of mcmc: ", steps)
-
-    flat_samples = sampler.get_chain(discard=burnin, flat=True)
-    np.save(MCMC_sample_saveFileName, flat_samples)
+# Production run
+print("Production run:")
+sampler.run_mcmc(pos, steps, progress=True);
+print("length of mcmc: ", steps)
 
 
 # %%
-# flat_samples = sampler.get_chain(discard=burnin, flat=True)
+flat_samples = sampler.get_chain(discard=burnin, flat=True)
 fig, axes = plt.subplots(12, figsize=(10, 7), sharex=True)
 samples = sampler.get_chain()
-labels = ["$\Omega_{m}$", "$\\beta$", *["$P_%d$" % (i+1) for i in range(10)]]
+labels = ["$\Omega_{m}$", "$\\beta$", *["$P_{%d}$" % (i+1) for i in range(9)], "$P_{10}$"]
 for i in range(ndim):
     ax = axes[i]
     ax.plot(samples[:, :, i], "k", alpha=0.3)
@@ -309,36 +300,66 @@ plt.show()
 
 # %%
 # corner plot
+import matplotlib as mpl
 
-# beta = omega_0**0.6 / b, where b is the galaxy bias parameter and is estimated to be within the range 1.0 and 1.5
-# best might be to use b = 1.23 which gives beta = 0.4
-
+mpl.rcParams.update({
+    "text.usetex": True,
+    "font.family": "Helvetica"
+})
+print(flat_samples.shape)
 # flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 flat_samples = sampler.get_chain(discard=burnin, flat=True)
 print(flat_samples.shape)
 
+fg = plt.figure(figsize=(24, 24))
 fig = corner.corner(
 
     # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
     # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
     # flat_samples, labels=labels, truths=[0.315, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]]
     flat_samples, 
-    title_fmt='.5f',
+    title_fmt='.4f',
     bins=30,
     show_titles=True,
     labels=labels, 
-    truths=[0.315, 0.5, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]],
+    truths=[0.315, 0.5, *[0.15, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]],
     plot_density=True,
     plot_datapoints=True,
     fill_contours=False,
     smooth=True,
+    fig=fg,
     levels=(0.6827, 0.90, 0.9545),
     quantiles=[0.16, 0.5, 0.84],
-    title_kwargs={"fontsize": 10},
-    truth_color='cornflowerblue',
+    title_kwargs={"fontsize": 18},
+    label_kwargs={"fontsize": 18},
+    truth_color='orangered',
         
 );
-fig.savefig("corner_plot.png", dpi=1000)
+i=0
+for ax in fig.get_axes():
+    ax.tick_params(axis='both', which='major', labelsize=14)
+    # ax.set_xlabel(labels[i],fontsize=25)
+    for line in ax.get_lines():
+        line.set_linewidth(1.5)  # Set to desired thickness
+    i+=1
+
+line1 = plt.Line2D([0], [0], color='orangered', linewidth=1.3, linestyle='-', marker='s')
+line2 = plt.Line2D([0], [0], color='black', linewidth=2, linestyle='--')
+line3 = plt.Line2D([0], [0], color='black', linewidth=2, linestyle='-')
+# You can adjust the line colors and styles to match your plot's elements
+
+# Choose an appropriate axis for the legend
+# For a corner plot, the top right axis is usually empty, so we can use it for the legend
+fig.legend([line1, line2, line3], 
+           ['Truth Value', 
+            '$\pm 1\sigma$ Interval around Median \n (1-D Distributions)',
+            'Contour Levels: 68$\mathbf{\%}$, 90$\mathbf{\%}$, 95$\mathbf{\%}$ \n (2-D Distributions)'], 
+            loc=(0.63,0.75),
+            prop={'size': 30},
+            # shadow=True,
+            )
+
+fig.savefig("corner_plot_ONLY_RSD.png", dpi=200)
 
 # %%
 
@@ -376,7 +397,7 @@ else:
 
 
 # %%
-print(flat_samples.shape)
+
 fg = plt.figure(figsize=(6, 6))
 fig = corner.corner(
     # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
@@ -559,5 +580,61 @@ def plot_2d_likelihood(samples, x_index, y_index, labels, truths=None, sigmas=[0
 # Example usage:
 labels = ['Ωm', 'β'] # Replace with your parameter names
 plot_2d_likelihood(flat_samples, x_index=0, y_index=1, labels=labels, truths=[0.315, 0.5])
+
+# %%
+
+
+
+from matplotlib import ticker
+
+import matplotlib as mpl
+
+mpl.rcParams.update({
+    "text.usetex": True,
+    "font.family": "Helvetica"
+})
+
+# import seaborn as sns
+
+# Violin plot
+
+powerSpectrumSamples = sampler.get_chain(discard=burnin, flat=True)[:, 2:] # Ignore first two columns, which is omega_matter and beta
+
+plt.figure(dpi=200, figsize=(8,6))
+violin_plot = plt.violinplot(powerSpectrumSamples, showmeans=False, widths=0.7)
+
+plt.plot([i+1 for i in range(10)], [0.15, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3], "o", label="Truth", c="k",markersize=3)
+# plt.grid(color='#EEEEEE', linestyle=':', linewidth=1.2)
+
+# plot the background power spectrum
+k_vals = np.linspace(0, 201, 5000)
+P_vals = [P_parametrised(k, k_bin_edges, k_bin_heights) for k in k_vals]
+plt.plot(k_vals * (10/200) + 0.5, P_vals, c="grey", zorder=0, lw=1, alpha=0.8)
+
+
+color = "orangered"
+color_fill = "orange"
+
+for violin in violin_plot['bodies']:
+    violin.set_color(color_fill)
+    violin.set_alpha(0.5)
+    violin.set_edgecolor("red")
+
+parts = ["cmins", "cmaxes", "cbars"]
+for part in parts:
+    violin_plot[part].set_color(color)
+
+handles, labels = plt.gca().get_legend_handles_labels()
+handles.insert(0, violin_plot["bodies"][0])
+labels.insert(0, "Samples")
+plt.legend(handles, labels, loc="upper left", fontsize=16)
+plt.xticks([i+1 for i in range(10)], [i+1 for i in range(10)], fontsize=16)
+plt.yticks( fontsize=16)
+plt.xlabel(r'Bin $i$', fontsize=18)
+plt.ylabel("$P_{i}$", fontsize=18)
+plt.ylim(0)
+plt.xlim(0.5)
+plt.savefig("Plots/violin_plot.png")
+plt.show()
 
 # %%

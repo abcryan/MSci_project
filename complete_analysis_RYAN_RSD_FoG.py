@@ -61,7 +61,7 @@ beta_true = omega_matter_true**0.6 / b_true
 #########################
 
 # More sophisticated power specturm
-k_bin_edges, k_bin_heights = create_power_spectrum(k_max, 10, np.array([0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]))
+k_bin_edges, k_bin_heights = create_power_spectrum(k_max, 10, np.array([0.15, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]))
 # k_bin_edges, k_bin_heights = create_power_spectrum(k_max, 2, np.array([0.35, 0.8]))
 k_vals = np.linspace(0, 400, 1000)
 P_vals = [P_parametrised(k, k_bin_edges, k_bin_heights) for k in k_vals]
@@ -201,6 +201,7 @@ print(F_saveFileName)
 # Initialize
 # omega_matters = np.linspace(omega_matter_0 - 0.008, omega_matter_0 + 0.005, 14)
 omega_matters = np.linspace(omega_matter_0 - 0.010, omega_matter_0 + 0.010, 21)
+# omega_matters = np.linspace(omega_matter_0 - 0.010, omega_matter_0 + 0.009, 20)
 
 # omega_matters = np.linspace(omega_matter_0 - 0.012, omega_matter_0 + 0.012, 18)
 # P_amps = np.linspace(0.05, 1.05, 51)
@@ -333,7 +334,7 @@ def log_probability(theta):
 # %%
 # calculate Monte Carlo Markov Chain
 
-steps = 2000
+steps = 3000
 n_walkers = 32
 burnin = 300
 
@@ -393,7 +394,7 @@ fig = corner.corner(
     bins=30,
     show_titles=True,
     labels=labels, 
-    truths=[0.315, 0.5, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]],
+    truths=[0.315, 0.5, *[0.15, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]],
     plot_density=True,
     plot_datapoints=True,
     fill_contours=False,
@@ -628,7 +629,17 @@ plot_2d_likelihood(flat_samples, x_index=0, y_index=1, labels=labels, truths=[0.
 
 # %%
 
-import seaborn as sns
+
+from matplotlib import ticker
+
+import matplotlib as mpl
+
+mpl.rcParams.update({
+    "text.usetex": True,
+    "font.family": "Helvetica"
+})
+
+# import seaborn as sns
 
 # Violin plot
 
@@ -637,7 +648,7 @@ powerSpectrumSamples = sampler.get_chain(discard=burnin, flat=True)[:, 2:] # Ign
 plt.figure(dpi=400, figsize=(8,6))
 violin_plot = plt.violinplot(powerSpectrumSamples, showmeans=False, widths=0.7)
 
-plt.plot([i+1 for i in range(10)], [0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3], "o", label="Truth", c="k",markersize=3)
+plt.plot([i+1 for i in range(10)], [0.15, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3], "o", label="Truth", c="k",markersize=3)
 # plt.grid(color='#EEEEEE', linestyle=':', linewidth=1.2)
 
 # plot the background power spectrum
@@ -669,5 +680,6 @@ plt.ylim(0)
 plt.xlim(0.5)
 plt.savefig("Plots/violin_plot.png")
 plt.show()
+
 
 # %%

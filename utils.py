@@ -97,14 +97,27 @@ def plotField(grid, title="", colorbarLabel=r'$\delta(r, \theta, \phi)$', saveFi
     # i = 500
     # title = r"$\delta(\mathbf{r})$ at $r$=%.2f" % radii_true[i] + "\n" + "$r_{max}$=%.2f, $k_{max}$=%d, $l_{max}$=%d" % (r_max_true, k_max, l_max)
 
-    fig, ax = grid.plot(
-        # projection=ccrs.Mollweide(),
-        colorbar='right',
+    # fig, ax = grid.plot(
+    #     projection=ccrs.Mollweide(),
+    #     colorbar='right',
+    #     cb_label=colorbarLabel,
+    #     title=title,
+    #     grid=False,
+    #     show=False)
+    
+    # Specify the figure size in inches (width, height)
+    fig, ax = plt.subplots(figsize=(12, 8), subplot_kw={'projection': ccrs.Mollweide()})
+
+    # Now use the ax object to plot your data
+    grid.plot(
+        ax=ax,  # Specify the Axes object to plot on
+        projection=ccrs.Mollweide(),
+        colorbar='left',
         cb_label=colorbarLabel,
         title=title,
         grid=False,
         show=False)
-    
+
     if saveFileName:
         plt.savefig("field.png", transparent=False, dpi=300)
 
