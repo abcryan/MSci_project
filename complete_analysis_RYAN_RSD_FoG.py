@@ -200,8 +200,11 @@ print(F_saveFileName)
 # print(W_observed[:,20,29])
 # Initialize
 # omega_matters = np.linspace(omega_matter_0 - 0.008, omega_matter_0 + 0.005, 14)
+# omega_matters = np.linspace(omega_matter_0 - 0.006, omega_matter_0 + 0.001, 8)
+# omega_matters = np.linspace(omega_matter_0, omega_matter_0 + 0.008, 9)
 omega_matters = np.linspace(omega_matter_0 - 0.010, omega_matter_0 + 0.010, 21)
-# omega_matters = np.linspace(omega_matter_0 - 0.010, omega_matter_0 + 0.009, 20)
+# omega_matters = np.linspace(omega_matter_0 - 0.010, omega_matter_0 + 0.003, 14)
+# omega_matters = np.linspace(omega_matter_0 - 0.015, omega_matter_0 + 0.05, 21)
 
 # omega_matters = np.linspace(omega_matter_0 - 0.012, omega_matter_0 + 0.012, 18)
 # P_amps = np.linspace(0.05, 1.05, 51)
@@ -334,9 +337,9 @@ def log_probability(theta):
 # %%
 # calculate Monte Carlo Markov Chain
 
-steps = 3000
+steps = 4000
 n_walkers = 32
-burnin = 300
+burnin = 200
 
 pos = np.array([0.315, 0.5, *k_bin_heights]) + 1e-4 * np.random.randn(n_walkers, 12)
 nwalkers, ndim = pos.shape      #nwalkers = number of walkers, ndim = number of dimensions in parameter space
@@ -376,21 +379,25 @@ plt.show()
 
 # %%
 # corner plot
+import matplotlib as mpl
 
-# beta = omega_0**0.6 / b, where b is the galaxy bias parameter and is estimated to be within the range 1.0 and 1.5
-# best might be to use b = 1.23 which gives beta = 0.4
-
+mpl.rcParams.update({
+    "text.usetex": True,
+    "font.family": "Helvetica"
+})
+print(flat_samples.shape)
 # flat_samples = sampler.get_chain(discard=100, thin=15, flat=True)
 flat_samples = sampler.get_chain(discard=burnin, flat=True)
 print(flat_samples.shape)
 
+fg = plt.figure(figsize=(24, 24))
 fig = corner.corner(
 
     # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
     # flat_samples, labels=labels, truths=[0.315, *[0.35, 0.8]]
     # flat_samples, labels=labels, truths=[0.315, *[0.1, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3]]
     flat_samples, 
-    title_fmt='.5f',
+    title_fmt='.4f',
     bins=30,
     show_titles=True,
     labels=labels, 
@@ -399,13 +406,39 @@ fig = corner.corner(
     plot_datapoints=True,
     fill_contours=False,
     smooth=True,
+    fig=fg,
     levels=(0.6827, 0.90, 0.9545),
     quantiles=[0.16, 0.5, 0.84],
-    title_kwargs={"fontsize": 10},
-    truth_color='cornflowerblue',
+    title_kwargs={"fontsize": 18},
+    label_kwargs={"fontsize": 18},
+    truth_color='orangered',
         
 );
-fig.savefig("corner_plot.png", dpi=1000)
+i=0
+for ax in fig.get_axes():
+    ax.tick_params(axis='both', which='major', labelsize=14)
+    # ax.set_xlabel(labels[i],fontsize=25)
+    for line in ax.get_lines():
+        line.set_linewidth(1.5)  # Set to desired thickness
+    i+=1
+
+line1 = plt.Line2D([0], [0], color='orangered', linewidth=1.3, linestyle='-', marker='s')
+line2 = plt.Line2D([0], [0], color='black', linewidth=2, linestyle='--')
+line3 = plt.Line2D([0], [0], color='black', linewidth=2, linestyle='-')
+# You can adjust the line colors and styles to match your plot's elements
+
+# Choose an appropriate axis for the legend
+# For a corner plot, the top right axis is usually empty, so we can use it for the legend
+fig.legend([line1, line2, line3], 
+           ['Truth Value', 
+            '$\pm 1\sigma$ Interval around Median \n (1-D Distributions)',
+            'Contour Levels: 68$\mathbf{\%}$, 90$\mathbf{\%}$, 95$\mathbf{\%}$ \n (2-D Distributions)'], 
+            loc=(0.63,0.75),
+            prop={'size': 30},
+            # shadow=True,
+            )
+
+fig.savefig("corner_plot_FoG.png", dpi=200)
 
 # %%
 
@@ -461,49 +494,47 @@ fig = corner.corner(
     smooth=True,
     levels=(0.6827, 0.90, 0.9545),
     quantiles=[0.16, 0.5, 0.84],
-    title_kwargs={"fontsize": 10},
-    truth_color='cornflowerblue',
+    title_kwargs={"fontsize": 18},
+    label_kwargs={"fontsize": 20},
+    truth_color='dodgerblue',
     fig=fg,
-    titles = ["$\Omega_{m}^{median}$", "$\\beta^{median}$"]
+    titles = ["$\Omega_{m}$", "$\\beta$"]
             );
 
-for ax in fig.get_axes():
-    for line in ax.get_lines():
-        line.set_linewidth(1)  # Set to desired thickness
 
-line1 = plt.Line2D([0], [0], color='cornflowerblue', linewidth=0.8, linestyle='-', marker='s')
-line2 = plt.Line2D([0], [0], color='black', linewidth=1, linestyle='--')
+for ax in fig.get_axes():
+    ax.tick_params(axis='both', which='major', labelsize=15)
+    for line in ax.get_lines():
+        line.set_linewidth(1.5)  # Set to desired thickness
+
+line1 = plt.Line2D([0], [0], color='dodgerblue', linewidth=1.5, linestyle='-', marker='s')
+line2 = plt.Line2D([0], [0], color='black', linewidth=2, linestyle='--')
+line3 = plt.Line2D([0], [0], color='white', linewidth=2, linestyle='-')
 # You can adjust the line colors and styles to match your plot's elements
 
 # Choose an appropriate axis for the legend
 # For a corner plot, the top right axis is usually empty, so we can use it for the legend
-fig.legend([line1, line2], 
-           ['$\Omega_{m}^{True}$ = %.3f \n$\\beta^{True}$ = %.1f' % (omega_matter_true, beta_true), 
-            '1-$\sigma$ interval \naround median'], 
-            loc=(0.63,0.75),
-            prop={'size': 10},
+fig.legend([line1], 
+           ['Truth' 
+            # '$\pm 1\sigma$ Interval around Median \n (1D Distributions)',
+            # 'Contour Levels: 68$\mathbf{\%}$, 90$\mathbf{\%}$, 95$\mathbf{\%}$ \n (2D Distributions)'
+            ], 
+            loc=(0.62,0.83),
+            prop={'size': 18},
             # shadow=True,
             )
+ax0 = fig.axes[0]
+ax0.annotate('$\Omega_{m}^0 = 0.320$ ', xy=(1.25, 0.5505), xycoords='axes fraction', color='black', fontsize=20)
 
 ax = fig.axes[2]
-ax.annotate('68%', xy=(0.5, 0.305), xycoords='axes fraction', fontsize=6)
-ax.annotate('90%', xy=(0.49, 0.22), xycoords='axes fraction', fontsize=6)
-ax.annotate('95%', xy=(0.48, 0.17), xycoords='axes fraction', fontsize=6)
+ax.annotate('$68\%$', xy=(0.4, 0.3705), xycoords='axes fraction', fontsize=8)
+ax.annotate('$90\%$', xy=(0.4, 0.282), xycoords='axes fraction', fontsize=8)
+ax.annotate('$95\%$', xy=(0.38, 0.225), xycoords='axes fraction', fontsize=8)
 
 
-# fig.gca().annotate(
-#     "",
-#     xy=(1.0, 1.0),
-#     xycoords="figure fraction",
-#     xytext=(-20, -10),
-#     textcoords="offset points",
-#     ha="right",
-#     va="top",
-# )
-# axes = np.array(fig.axes).reshape((2, 2))
-# for a in axes[np.triu_indices(2)]:
-#     a.remove()
-fig.savefig("demo.png", dpi=1000)
+fig.savefig("FOG_320.png", dpi=200)
+
+
 
 #  %%
 if hasattr(sampler, 'get_log_prob'):
@@ -629,7 +660,6 @@ plot_2d_likelihood(flat_samples, x_index=0, y_index=1, labels=labels, truths=[0.
 
 # %%
 
-
 from matplotlib import ticker
 
 import matplotlib as mpl
@@ -645,7 +675,7 @@ mpl.rcParams.update({
 
 powerSpectrumSamples = sampler.get_chain(discard=burnin, flat=True)[:, 2:] # Ignore first two columns, which is omega_matter and beta
 
-plt.figure(dpi=400, figsize=(8,6))
+plt.figure(dpi=200, figsize=(8,6))
 violin_plot = plt.violinplot(powerSpectrumSamples, showmeans=False, widths=0.7)
 
 plt.plot([i+1 for i in range(10)], [0.15, 0.35, 0.6, 0.8, 0.9, 1, 0.95, 0.85, 0.7, 0.3], "o", label="Truth", c="k",markersize=3)
@@ -657,13 +687,13 @@ P_vals = [P_parametrised(k, k_bin_edges, k_bin_heights) for k in k_vals]
 plt.plot(k_vals * (10/200) + 0.5, P_vals, c="grey", zorder=0, lw=1, alpha=0.8)
 
 
-color = "red"
-color_fill = "orange"
+color = "dodgerblue"
+color_fill = "dodgerblue"
 
 for violin in violin_plot['bodies']:
     violin.set_color(color_fill)
     violin.set_alpha(0.5)
-    violin.set_edgecolor("red")
+    violin.set_edgecolor("dodgerblue")
 
 parts = ["cmins", "cmaxes", "cbars"]
 for part in parts:
@@ -672,14 +702,14 @@ for part in parts:
 handles, labels = plt.gca().get_legend_handles_labels()
 handles.insert(0, violin_plot["bodies"][0])
 labels.insert(0, "Samples")
-plt.legend(handles, labels)
-plt.xticks([i+1 for i in range(10)], [i+1 for i in range(10)])
-plt.xlabel(r'Bin $i$')
-plt.ylabel("$P_{i}$")
+plt.legend(handles, labels, loc="upper left", fontsize=16)
+plt.xticks([i+1 for i in range(10)], [i+1 for i in range(10)], fontsize=16)
+plt.yticks( fontsize=16)
+plt.xlabel(r'Bin $i$', fontsize=18)
+plt.ylabel("$P_{i}$", fontsize=18)
 plt.ylim(0)
 plt.xlim(0.5)
-plt.savefig("Plots/violin_plot.png")
+plt.savefig("Plots/violin_plot_FOG_320.png")
 plt.show()
-
 
 # %%
