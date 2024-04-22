@@ -44,7 +44,7 @@ n_max_ls = np.array([calc_n_max_l(l, k_max, r_max_true) for l in range(l_max + 1
 R = 0.25    # Selection function scale length
 
 omega_matter_true = 0.315
-omega_matter_0 = 0.310      # fiducial
+omega_matter_0 = 0.315      # fiducial
 
 P_amp = 1
 
@@ -52,7 +52,7 @@ P_amp = 1
 b_true = 1.0   # galaxy bias parameter, 1.0 <= b <= 1.5 usually in RSD Surveys
 beta_true = omega_matter_true**0.6 / b_true
 # beta_true = 0.0
-
+print(beta_true)
 
 #########################
 #########################
@@ -162,8 +162,8 @@ for l in range(l_max + 1):
 ### Likelihood Calculation ###
 
 # Initialize
-# omega_matters = np.linspace(omega_matter_0 - 0.008, omega_matter_0 + 0.005, 14)
-omega_matters = np.linspace(omega_matter_0 - 0.010, omega_matter_0 + 0.010, 21)
+omega_matters = np.linspace(omega_matter_0 - 0.008, omega_matter_0 + 0.005, 14)
+# omega_matters = np.linspace(omega_matter_0 - 0.010, omega_matter_0 + 0.010, 21)
 # P_amps = np.linspace(0.05, 1.05, 51)
 # P_amps = np.linspace(0.95, 1.05, 51)
 # betas = np.linspace(0.0, 0.7, 51)           # RSD parameter
@@ -351,15 +351,15 @@ line3 = plt.Line2D([0], [0], color='black', linewidth=2, linestyle='-')
 # Choose an appropriate axis for the legend
 # For a corner plot, the top right axis is usually empty, so we can use it for the legend
 fig.legend([line1, line2, line3], 
-           ['Truth Value', 
-            '$\pm 1\sigma$ Interval around Median \n (1-D Distributions)',
-            'Contour Levels: 68$\mathbf{\%}$, 90$\mathbf{\%}$, 95$\mathbf{\%}$ \n (2-D Distributions)'], 
+           ['Truth', 
+            '$1\sigma$ Interval around Median \n (1D Distributions)',
+            'Contour Levels: 68$\mathbf{\%}$, 90$\mathbf{\%}$, 95$\mathbf{\%}$ \n (2D Distributions)'], 
             loc=(0.63,0.75),
             prop={'size': 30},
             # shadow=True,
             )
 
-fig.savefig("corner_plot_ONLY_RSD.png", dpi=200)
+fig.savefig("corner_plot_ONLY_RSD_2.png", dpi=300)
 
 # %%
 
